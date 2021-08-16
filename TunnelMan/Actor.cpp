@@ -1,7 +1,6 @@
 #include "Actor.h"
 #include "StudentWorld.h"
 #include "GraphObject.h"
-using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Actor
@@ -41,52 +40,51 @@ StudentWorld* Actor::getWorld()
 }
 
 // moveTo(), direction comes from GraphObject
-void Actor::moveInDirection(Direction direction)
+// boulder not working properly yet so I took it out for now
+bool Actor::moveInDirection(Direction direction)
 {
     switch(direction) {
         case left:
-            if (getDirection() == left) {
-                if (!getWorld()->isThereBoulderinDirection(getX()-1, getY(), left, this)) {
-                    moveTo(getX()-1, getY());
-                    if (!getWorld()->isThereEarthAtPoint(getX(), getY()))
-                        getWorld()->playSound(SOUND_DIG);
-                }
+        {
+            std::cout << "LEFT in moveInDirection" << "\n";
+            if (getX() > 0) { //&& !getWorld()->isThereBoulderinDirection(getX(), getY(), left, this)) {
+                moveTo(getX()-1, getY());
+                std::cout << "should've moved to left" << "\n";
+                return true;
             }
-            // set new Direction function
-            break;
+            return false;
+        }
+            
         case right:
-            if (getDirection() == right) {
-                if (!getWorld()->isThereBoulderinDirection(getX()+1, getY(), right, this)) {
-                    moveTo(getX()+1, getY());
-                    if (!getWorld()->isThereEarthAtPoint(getX(), getY()))
-                        getWorld()->playSound(SOUND_DIG);
-                }
+        {
+            std::cout << "RIGHT in moveInDirection" << "\n";
+            if (getX() < (VIEW_HEIGHT - SPRITE_WIDTH))  { //&& !getWorld()->isThereBoulderinDirection(getX(), getY(), right, this)) {
+                moveTo(getX()+1, getY());
+                return true;
             }
-            // set new Direction function
-            break;
+            return false;
+        }
+            
         case up:
-            if (getDirection() == up) {
-                if (!getWorld()->isThereBoulderinDirection(getX(), getY()+1, up, this)) {
-                    moveTo(getX(), getY()+1);
-                    if (!getWorld()->isThereEarthAtPoint(getX(), getY()))
-                        getWorld()->playSound(SOUND_DIG);
-                }
+        {
+            if (getY() < (VIEW_HEIGHT - SPRITE_WIDTH))  { //&& !getWorld()->isThereBoulderinDirection(getX(), getY(), up, this)) {
+                moveTo(getX(), getY()+1);
+                return true;
             }
-            // set new Direction function
-            break;
+            return false;
+        }
+            
         case down:
-            if (getDirection() == down) {
-                if (!getWorld()->isThereBoulderinDirection(getX(), getY()-1, down, this)) {
-                    moveTo(getX(), getY()-1);
-                    if (!getWorld()->isThereEarthAtPoint(getX(), getY()))
-                        getWorld()->playSound(SOUND_DIG);
-                }
+        {
+            if (getY() > 0)  { //&& !getWorld()->isThereBoulderinDirection(getX(), getY(), down, this)) {
+                moveTo(getX(), getY()-1);
+                return true;
             }
-            // set new Direction function
-            break;
-        case none: return;
+            return false;
+        }
+            
+        case none: return false;
     }
-    return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -157,26 +155,61 @@ void TunnelMan::doSomething()
     
     int input;
     
-    // if where player stands is Earth
-    // dig
-    
     if (getWorld()->getKey(input)) {
         switch(input) {
             case KEY_PRESS_ESCAPE:
                 // dead
                 break;
             case KEY_PRESS_LEFT:
-                moveInDirection(left);
+            {
+                //std::cout << "LEFT in doSomething" << "\n";
+                if (getDirection() == left) {
+                    if (moveInDirection(left)) {
+                        if (getWorld()->isThereEarthAtPoint(getX(), getY()))
+                            getWorld()->digEarth(getX(), getY());
+                    }
+                }
+                else setDirection(left);
                 break;
+            }
+                
             case KEY_PRESS_RIGHT:
-                moveInDirection(right);
+            {
+                //std::cout << "RIGHT in doSomething" << "\n";
+                if (getDirection() == right) {
+                    if (moveInDirection(right)) {
+                        if (getWorld()->isThereEarthAtPoint(getX(), getY()))
+                            getWorld()->digEarth(getX(), getY());
+                    }
+                }
+                else setDirection(right);
                 break;
+            }
+                
             case KEY_PRESS_UP:
-                moveInDirection(up);
+            {
+                if (getDirection() == up) {
+                    if (moveInDirection(up)) {
+                        if (getWorld()->isThereEarthAtPoint(getX(), getY()))
+                            getWorld()->digEarth(getX(), getY());
+                    }
+                }
+                else setDirection(up);
                 break;
+            }
+                
             case KEY_PRESS_DOWN:
-                moveInDirection(down);
+            {
+                if (getDirection() == down) {
+                    if (moveInDirection(down)) {
+                        if (getWorld()->isThereEarthAtPoint(getX(), getY()))
+                            getWorld()->digEarth(getX(), getY());
+                    }
+                }
+                else setDirection(down);
                 break;
+            }
+                
             case KEY_PRESS_SPACE:
                 // shoot()
                 break;
@@ -185,6 +218,7 @@ void TunnelMan::doSomething()
                 if (m_sonar > 0) {
                     m_sonar--;
                     getWorld()->activateSonar(getX(), getY(), 12);
+                    
                     getWorld()->playSound(SOUND_SONAR);
                 }
                 break;

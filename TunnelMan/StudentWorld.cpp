@@ -41,7 +41,7 @@ void StudentWorld::cleanUp()
 
 int StudentWorld::init()
 {
-    makeEarthField();
+    initEarth();
     m_tunnelMan = new TunnelMan(this);
     ++tick;
     
@@ -69,11 +69,11 @@ int StudentWorld::move()
     return GWSTATUS_PLAYER_DIED;
 }
 
-void StudentWorld::makeEarthField()
+void StudentWorld::initEarth()
 {
     for(int i = 0; i < VIEW_WIDTH; ++i) {
         for(int j = 0; j < VIEW_HEIGHT - SPRITE_WIDTH; ++j) {
-            if(!(i >= 3 && i <= 33 && j >= 4)) {
+            if(!(i >= 30 && i <= 33 && j >= 4)) {
                 m_earth[i][j] = new Earth(i,j);
             }
         }
@@ -160,7 +160,10 @@ void StudentWorld::digEarth(int x, int y)
     // earth is 4 by 4, so iterate through x & y coordinates
     for (int i = x; i < x + 4; i++) {
         for (int j = y; j < y + 4; j++) {
-            m_earth[i][j] = nullptr;
+            if (m_earth[i][j] != nullptr) {
+                delete m_earth[i][j];
+                m_earth[i][j] = nullptr;
+            }
         }
     }
     playSound(SOUND_DIG);

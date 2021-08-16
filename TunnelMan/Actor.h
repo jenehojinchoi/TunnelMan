@@ -24,7 +24,7 @@ public:
     virtual bool canBeAnnoyed() const;
     
     StudentWorld* getWorld();
-    void moveInDirection(Direction direction);
+    bool moveInDirection(Direction direction);
     
 private:
     bool m_isAlive;

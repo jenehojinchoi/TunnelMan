@@ -25,7 +25,7 @@ public:
     virtual int init();
     virtual int move();
     virtual void cleanUp();
-    void makeEarthField();
+    void initEarth();
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // distance functions
