@@ -1,11 +1,9 @@
 #include "StudentWorld.h"
 #include "GraphObject.h"
 #include <iostream>
-#include <cmath>
 #include <algorithm>
 #include <string>
-#include <vector>
-#include <iomanip>
+#include <queue>
 using namespace std;
 
 GameWorld* createStudentWorld(string assetDir)
@@ -33,7 +31,7 @@ void StudentWorld::cleanUp()
     }
     m_actors.clear();
     delete m_tunnelMan;
-
+    m_numOfProtestors = 0;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // init
@@ -42,13 +40,30 @@ void StudentWorld::cleanUp()
 int StudentWorld::init()
 {
     initEarth();
-    m_tunnelMan = new TunnelMan(this);
-    ++tick;
+    initTunnelMan();
+    ++m_tick;
     
     return GWSTATUS_CONTINUE_GAME;
 }
 
-void StudentWorld::askPlayerAndObjectsToDoSomething()
+void StudentWorld::initEarth()
+{
+    for(int i = 0; i < VIEW_WIDTH; ++i) {
+        for(int j = 0; j < MAX_COORDINATE; ++j) {
+            if(!(i >= 30 && i <= 33 && j >= 4)) {
+                m_earth[i][j] = new Earth(i,j);
+            }
+        }
+    }
+}
+
+void StudentWorld::initTunnelMan()
+{
+    m_tunnelMan = new TunnelMan(this);
+}
+
+
+void StudentWorld::TunnelManActorsDoSomething()
 {
     m_tunnelMan->doSomething();
     for (std::vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); ++it)
@@ -59,8 +74,9 @@ int StudentWorld::move()
 {
     while(m_tunnelMan->isAlive())
     {
-        askPlayerAndObjectsToDoSomething();
-        ++tick;
+        TunnelManActorsDoSomething();
+        initProtesters();
+        ++m_tick;
         return GWSTATUS_CONTINUE_GAME;
     }
     
@@ -69,16 +85,10 @@ int StudentWorld::move()
     return GWSTATUS_PLAYER_DIED;
 }
 
-void StudentWorld::initEarth()
-{
-    for(int i = 0; i < VIEW_WIDTH; ++i) {
-        for(int j = 0; j < VIEW_HEIGHT - SPRITE_WIDTH; ++j) {
-            if(!(i >= 30 && i <= 33 && j >= 4)) {
-                m_earth[i][j] = new Earth(i,j);
-            }
-        }
-    }
-}
+//int StudentWorld::findOptimalPath(int startX, int startY, int goalX, int goalY, GraphObject::Direction &initialStep)
+//{
+//
+//}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // distance functions
@@ -94,52 +104,140 @@ double StudentWorld::getDistanceFromTunnelMan(int x, int y)
     return getDistance(x, y, m_tunnelMan->getX(), m_tunnelMan->getY());
 }
 
-bool StudentWorld::isThereBoulderinDirection(int x, int y, GraphObject::Direction direction, Actor *actor)
+bool StudentWorld::shiftCoordinates(int &x, int &y, const int amountToShift, GraphObject::Direction directionToShift) const
 {
-    vector<Actor*>::iterator it;
-    for (it = m_actors.begin(); it != m_actors.end(); it++) {
-        if ((*it)->getID() == TID_BOULDER) {
-            double distance = getDistance(x, y, (*it)->getX(), (*it)->getY());
-            if (distance < 3.0)
-                return false;
+    switch(directionToShift) {
+        case GraphObject::down:
+        {
+            y -= amountToShift;
+            if (y < 0) return false;
+            break;
         }
+            
+        case GraphObject::up:
+        {
+            y += amountToShift;
+            
+            if (y > MAX_COORDINATE) return false;
+            break;
+        }
+            
+        case GraphObject::left:
+        {
+            x -= amountToShift;
+            
+            if (x < 0) return false;
+            break;
+        }
+            
+        case GraphObject::right:
+        {
+            x += amountToShift;
+            
+            if (x > MAX_COORDINATE) return false;
+            break;
+        }
+            
+        case GraphObject::none:
+            return false;
     }
     return true;
+}
+
+bool StudentWorld::isThereBoulderInDirection(int x, int y, GraphObject::Direction direction, Actor *actor)
+{
+    if(!shiftCoordinates(x, y, 1, direction)) return true;
+    
+    vector<Actor*>::iterator it;
+    for (it = m_actors.begin(); it != m_actors.end(); ++it) {
+        if ((*it)->getID() == TID_BOULDER) {
+            double distance = getDistance(x, y, (*it)->getX(), (*it)->getY());
+            if (distance <= 3.0) return true;
+        }
+    }
+    
+    return false;
 }
 
 // checking for earth should be made as another function
 bool StudentWorld::isThereEarthInDirection(int x, int y, GraphObject::Direction direction)
 {
-//    switch(direction){
-//        case GraphObject::right:
-//            if (x + 4 > 60) return false;
-//            break;
-//        case GraphObject::up:
-//            if (y - 4 > 60) return false;
-//            break;
-//        case GraphObject::left:
-//            if (x - 4 < 0) return false;
-//            break;
-//        case GraphObject::down:
-//            if (y - 4 > 60) return false;
-//            break;
-//        case GraphObject::none:
-//            return false;
-//    } return true;
+    switch (direction) //Determines whether to shift the x or y coordinate, and by how much
+    {
+        case GraphObject::right:
+        case GraphObject::up:
+        {
+            shiftCoordinates(x, y, 4, direction);
+            break;
+        }
+        case GraphObject::left:
+        case GraphObject::down:
+        {
+            shiftCoordinates(x, y, 1, direction);
+            break;
+        }
+        case GraphObject::none:
+            return true;
+    }
     
     if (direction == GraphObject::right || direction == GraphObject::left) {
         for (int i = y; i < y + 4; ++i) {
-            if (m_earth[x][i]) return false;
+            if (m_earth[x][i]) return true;
         }
     } else {
         for (int i = x; i < x + 4; ++i) {
-            if (m_earth[i][y]) return false;
+            if (m_earth[i][y]) return true;
         }
     }
     
-    return true;
+    return false;
 }
 
+
+bool StudentWorld::isThereTunnelManInLine(int x, int y, GraphObject::Direction &direction)
+{
+    int tunnelManX = m_tunnelMan->getX();
+    int tunnelManY = m_tunnelMan->getY();
+    
+    if (x == tunnelManX) {
+        if (y > tunnelManY) direction = GraphObject::down;
+        else direction = GraphObject::up;
+    }
+    
+    else if (y == tunnelManY) {
+        if (x > tunnelManX) direction = GraphObject::left;
+        else direction = GraphObject::right;
+    }
+    
+    else return false; // not in a same x or y (not in a straight line)
+    
+    while(!isThereEarthInDirection(x, y, direction) && !isThereBoulderInDirection(x, y, direction, nullptr)) {
+        shiftCoordinates(x, y, 1, direction);
+        if (x == tunnelManX && y == tunnelManY) return true;
+    }
+    
+    return false;   //There was either Earth or a boulder blocking the path to TunnelMan
+}
+
+bool StudentWorld::isProtestorFacingTunnelMan(int x, int y, GraphObject::Direction direction)
+{
+    int amountToShift = 1;
+    if (direction == GraphObject::left || direction == GraphObject::down)
+        amountToShift = 4;
+    if (!shiftCoordinates(x, y, amountToShift, direction)) return false;
+    
+    for (int i = x; i < x + SPRITE_WIDTH; ++i) {
+        for (int j = y; j < y + SPRITE_HEIGHT; ++j) {
+            if (i == m_tunnelMan->getX() && j == m_tunnelMan->getY()) return true;
+        }
+    }
+    
+    return false;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// at point
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool StudentWorld::isThereEarthAtPoint(int x, int y)
 {
@@ -151,6 +249,8 @@ bool StudentWorld::isThereEarthAtPoint(int x, int y)
     }
     return false;
 }
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // action functions
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -191,3 +291,42 @@ void StudentWorld::dropGold(Gold* gold)
 {
     m_droppedGold.push_back(gold);
 }
+
+//GraphObject::Direction StudentWorld::getDirectionToExit(int x, int y)
+//{
+//    GraphObject::Direction d;
+//    findOptimalPath(x, y, MAX_COORDINATE, MAX_COORDINATE, d);
+//    return d;
+//}
+//
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// keeping track of games
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void StudentWorld::decreaseNumOfProtestors()
+{
+    --this->m_numOfProtestors;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Private functions
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+void StudentWorld::initProtesters()
+{
+    int T = min(15, int(2 +getLevel() * 1.5));
+    int ticksToWaitBetweenMoves = max(25, 200-(int)getLevel());
+    
+    if (this->m_numOfProtestors > T) return;
+    
+    if (this->m_tick % ticksToWaitBetweenMoves == 0 || this->m_tick==0) {
+        m_actors.push_back(new Protestor(this, this->getLevel()));
+        ++this->m_numOfProtestors;
+    }
+}
+
+

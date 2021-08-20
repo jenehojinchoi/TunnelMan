@@ -23,19 +23,23 @@ public:
     ~StudentWorld();
 
     virtual int init();
+    void initEarth();
+    void initTunnelMan();
     virtual int move();
     virtual void cleanUp();
-    void initEarth();
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // distance functions
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     double getDistance(int x1, int y1, int x2, int y2);
     double getDistanceFromTunnelMan(int x, int y);
+    bool shiftCoordinates(int &x, int &y, const int amountToShift, GraphObject::Direction directionToShift) const;
     
     // direction
-    bool isThereBoulderinDirection(int x, int y, GraphObject::Direction direction, Actor *actor);
+    bool isThereBoulderInDirection(int x, int y, GraphObject::Direction direction, Actor *actor);
     bool isThereEarthInDirection(int x, int y, GraphObject::Direction direction);
+    bool isThereTunnelManInLine(int x, int y, GraphObject::Direction &direction);
+    bool isProtestorFacingTunnelMan(int x, int y, GraphObject::Direction direction);
     
     // at point
     bool isThereEarthAtPoint(int x, int y);
@@ -47,14 +51,23 @@ public:
     void activateSonar(int x, int y, int radius);
     void dropGold(Gold* gold);
     
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // keeping track of games
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void decreaseNumOfProtestors();
+    
+    
 private:
-    int tick;
+    int m_tick;
+    int m_numOfProtestors;
     std::vector<Actor*> m_actors;
     std::vector<Gold*> m_droppedGold;
     Earth* m_earth[64][64];
     TunnelMan* m_tunnelMan;
+
     
-    void askPlayerAndObjectsToDoSomething();
+    void TunnelManActorsDoSomething();
+    void initProtesters();
 };
 
 #endif // STUDENTWORLD_H_
