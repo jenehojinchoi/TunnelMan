@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <string>
 #include <queue>
+#include <sstream>
 using namespace std;
 
 GameWorld* createStudentWorld(string assetDir)
@@ -11,37 +12,82 @@ GameWorld* createStudentWorld(string assetDir)
     return new StudentWorld(assetDir);
 }
 
-StudentWorld::StudentWorld(string assetDir): GameWorld(assetDir) {}
+StudentWorld::StudentWorld(string assetDir): GameWorld(assetDir), m_tick(0), m_numOfProtestors(0) {}
 
 StudentWorld::~StudentWorld()
 {
     cleanUp();
 }
 
+int StudentWorld::move()
+{
+    while(m_tunnelMan->isAlive())
+    {
+        setDisplayText();
+        TunnelManActorsDoSomething();
+        initProtestors();
+        // TODO: destroy dead objects
+        ++m_tick;
+        
+        if (m_numOfBarrelsLeft == 0) return GWSTATUS_FINISHED_LEVEL;
+        
+        return GWSTATUS_CONTINUE_GAME;
+    }
+    
+    decLives();
+    playSound(SOUND_PLAYER_GIVE_UP);
+    return GWSTATUS_PLAYER_DIED;
+}
+
 void StudentWorld::cleanUp()
 {
+    // destroy earth
     for (int x = 0; x < 64; x++) {
         for (int y = 0; y < 60; y++) {
             delete m_earth[x][y];
         }
     }
+    
+    // destroy actors
     vector<Actor*>::iterator it;
     for (it = m_actors.begin(); it != m_actors.end(); it++) {
         delete *it;
     }
+    
     m_actors.clear();
-    delete m_tunnelMan;
     m_numOfProtestors = 0;
+    
+    // destroy tunnelman
+    delete m_tunnelMan;
 }
+
+void StudentWorld::setDisplayText()
+{
+    stringstream s;
+    s << "Lvl: " << setw(2) << getLevel() << " ";
+    s << "Lives: " << getLives() << " ";
+    s << "Hlth: " << setw(3) << m_tunnelMan->getHitPoint() * 10 << "% ";
+    s << "Wtr: " << setw(2) << m_tunnelMan->getSquirt() << " ";
+    s << "Gld: " << setw(2) << m_tunnelMan->getGold() << " ";
+    s << "Oil Left: " << setw(2) << this->m_numOfBarrelsLeft << " ";
+    s << "Sonar: " << setw(2) << m_tunnelMan->getSonar() << " ";
+    s << "Scr: " << setw(6) << setfill('0') << getScore();
+    
+    setGameStatText(s.str());
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // init
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int StudentWorld::init()
 {
+    std::cout << "StudentWorld::init" << "\n";
     initEarth();
     initTunnelMan();
-    ++m_tick;
+    
+    initBarrelsAndGold();
+    m_tick = 0;
     
     return GWSTATUS_CONTINUE_GAME;
 }
@@ -62,39 +108,56 @@ void StudentWorld::initTunnelMan()
     m_tunnelMan = new TunnelMan(this);
 }
 
-
-void StudentWorld::TunnelManActorsDoSomething()
+void StudentWorld::initBarrelsAndGold()
 {
-    m_tunnelMan->doSomething();
-    for (std::vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); ++it)
-        (*it)->doSomething();
+    this->m_numOfBarrelsLeft = fmin((2 + getLevel()), 21);
+    int numOfGold = fmax((5 - getLevel() / 2), 2);
+    generateBarrelsAndGold(m_numOfBarrelsLeft, 'B');
+    generateBarrelsAndGold(numOfGold, 'G');
 }
 
-int StudentWorld::move()
+void StudentWorld::generateRandomCoordinates(int &x, int &y) const
 {
-    while(m_tunnelMan->isAlive())
-    {
-        TunnelManActorsDoSomething();
-        initProtesters();
-        ++m_tick;
-        return GWSTATUS_CONTINUE_GAME;
+    x = rand() % (MAX_COORDINATE + 1);
+    y = rand() % (MAX_COORDINATE - SPRITE_WIDTH + 1);
+}
+
+void StudentWorld::generateBarrelsAndGold(const int numOfObjects, const char object)
+{
+    int x, y;
+    generateRandomCoordinates(x, y);
+
+    for (int i = 0; i < numOfObjects; ++i) {
+        //Generate new coordinates until area is clear
+        while (!noObjectsAtPoint(x, y) || ((x > (30 - SPRITE_WIDTH)) && x < 34 && y > 0)) {
+            generateRandomCoordinates(x, y);
+        }
+
+        switch(object)
+        {
+            // barrel of oil
+            case 'B':
+            {
+                m_actors.push_back(new OilBarrel(this, x, y));
+                std::cout<<"generateBarrelsAndGold: OilBarrel!!" << "\n";
+                break;
+            }
+            // gold
+            case 'G':
+            {
+                m_actors.push_back(new Gold(this, x, y, true, false));
+                std::cout<<"generateBarrelsAndGold: Gold!!" << "\n";
+                break;
+            }
+        }
     }
-    
-    decLives();
-    playSound(SOUND_PLAYER_GIVE_UP);
-    return GWSTATUS_PLAYER_DIED;
 }
-
-//int StudentWorld::findOptimalPath(int startX, int startY, int goalX, int goalY, GraphObject::Direction &initialStep)
-//{
-//
-//}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // distance functions
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-double StudentWorld::getDistance(int x1, int y1, int x2, int y2)
+double StudentWorld::getDistance(int x1, int y1, int x2, int y2) const
 {
     return sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
 }
@@ -159,7 +222,6 @@ bool StudentWorld::isThereBoulderInDirection(int x, int y, GraphObject::Directio
     return false;
 }
 
-// checking for earth should be made as another function
 bool StudentWorld::isThereEarthInDirection(int x, int y, GraphObject::Direction direction)
 {
     switch (direction) //Determines whether to shift the x or y coordinate, and by how much
@@ -179,6 +241,8 @@ bool StudentWorld::isThereEarthInDirection(int x, int y, GraphObject::Direction 
         case GraphObject::none:
             return true;
     }
+    
+    if (x < 0 || x >= VIEW_WIDTH || y < 0 || y >= VIEW_HEIGHT) return false;
     
     if (direction == GraphObject::right || direction == GraphObject::left) {
         for (int i = y; i < y + 4; ++i) {
@@ -239,6 +303,21 @@ bool StudentWorld::isProtestorFacingTunnelMan(int x, int y, GraphObject::Directi
 // at point
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+bool StudentWorld::noObjectsAtPoint(const int x, const int y)
+{
+    double d;
+    std::vector<Actor*>::iterator it;
+    it = m_actors.begin();
+    
+    while (it != m_actors.end()) {
+        d = getDistance(x, y, (*it)->getX(), (*it)->getY());
+        if (d < 6) return false;
+        ++it;
+    }
+    return true;
+}
+
 bool StudentWorld::isThereEarthAtPoint(int x, int y)
 {
     for (int i = x; i < x + SPRITE_WIDTH; ++i) {
@@ -287,18 +366,6 @@ void StudentWorld::activateSonar(int x, int y, int radius)
     playSound(SOUND_SONAR);
 }
 
-void StudentWorld::dropGold(Gold* gold)
-{
-    m_droppedGold.push_back(gold);
-}
-
-//GraphObject::Direction StudentWorld::getDirectionToExit(int x, int y)
-//{
-//    GraphObject::Direction d;
-//    findOptimalPath(x, y, MAX_COORDINATE, MAX_COORDINATE, d);
-//    return d;
-//}
-//
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // keeping track of games
@@ -309,24 +376,35 @@ void StudentWorld::decreaseNumOfProtestors()
     --this->m_numOfProtestors;
 }
 
+void StudentWorld::decreaseNumOfBarrels()
+{
+    --this->m_numOfBarrelsLeft;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Private functions
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
-void StudentWorld::initProtesters()
+void StudentWorld::initProtestors()
 {
     int T = min(15, int(2 +getLevel() * 1.5));
     int ticksToWaitBetweenMoves = max(25, 200-(int)getLevel());
     
     if (this->m_numOfProtestors > T) return;
     
-    if (this->m_tick % ticksToWaitBetweenMoves == 0 || this->m_tick==0) {
+    if (this->m_tick % ticksToWaitBetweenMoves == 0 || this->m_tick == 0) {
+        // TODO: hardcore and regular not implemented yet
+        // probability, chance
+        // compare and make conditional loop
         m_actors.push_back(new Protestor(this, this->getLevel()));
         ++this->m_numOfProtestors;
     }
 }
 
 
+void StudentWorld::TunnelManActorsDoSomething()
+{
+    m_tunnelMan->doSomething();
+    for (std::vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); ++it)
+        (*it)->doSomething();
+}

@@ -58,7 +58,7 @@ private:
 class TunnelMan: public People
 {
 public:
-    TunnelMan(StudentWorld* world); // TunnelMan(StudentWorld* world);
+    TunnelMan(StudentWorld* world);
     ~TunnelMan();
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -112,8 +112,9 @@ class Boulder: public Actor
 public:
     Boulder(int startX, int startY);
     virtual void doSomething();
+    
 private:
-    int tick;
+    int m_ticksWaiting;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -125,7 +126,9 @@ class Squirt: public Actor
 public:
     Squirt(int startX, int startY);
     virtual void doSomething();
-// private not yet
+
+private:
+    int m_ticksAlive;
 };
 
 
@@ -138,16 +141,15 @@ class Protestor: public People
 public:
     Protestor(StudentWorld* world, int level);
     virtual void doSomething() override;
-    void annoy(int damage) override;
+    void annoy(int damage) override; // TODO:
     
-
 private:
     int m_ticksToWaitBetweenMoves;
     
-    int m_tickRest; // currentRestingTick
-    int m_tickNonRest; // totalNonRestingTicks
-    int m_tickSinceLastTurn; // lastTickTurnMade
-    int m_tickNonRestSinceShouted; // nonRestingTickShoutedAt
+    int m_tickRest;
+    int m_tickNonRest;
+    int m_tickSinceLastTurn;
+    int m_tickNonRestSinceShouted;
     int numSquaresToMoveInCurrentDirection;
     
     int m_level;
@@ -172,10 +174,13 @@ private:
 class Goodie: public Actor
 {
 public:
-    Goodie(StudentWorld* world, int imageID, int startX, int startY, bool isDisplayed);
-    bool isPickedUp();
+    Goodie(StudentWorld* world, int imageID, int startX, int startY, int score, int sound, bool isDisplayed);
+    bool isPickupAbleByTunnelMan(const double &distance);
+    
 private:
-    bool m_isPickedUp;
+    int m_sound;
+    int m_score;
+    int m_tick;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -185,12 +190,12 @@ private:
 class Gold: public Goodie
 {
 public:
-    Gold(StudentWorld* world, int startX, int startY, bool isDisplayed, bool dropped);
-    //void doSomething() override;
-    //void isPickedUp();
+    Gold(StudentWorld* world, int startX, int startY, bool dropped, bool isDisplayed);
+    void doSomething() override;
+    //TODO: void isPickupAbleByProtestor();
 
-//private:
-    //bool m_isDropped;
+private:
+    bool m_isPickupAbleByTunnelMan;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

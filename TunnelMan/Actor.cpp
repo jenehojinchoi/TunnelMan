@@ -46,10 +46,10 @@ bool Actor::moveInDirection(Direction direction)
     switch(direction) {
         case left:
         {
-            std::cout << "LEFT in moveInDirection" << "\n";
+            //std::cout << "LEFT in moveInDirection" << "\n";
             if (getX() > 0 && !getWorld()->isThereBoulderInDirection(getX(), getY(), left, this)) {
                 moveTo(getX()-1, getY());
-                std::cout << "should've moved to left" << "\n";
+                //std::cout << "should've moved to left" << "\n";
                 return true;
             }
             return false;
@@ -57,7 +57,7 @@ bool Actor::moveInDirection(Direction direction)
             
         case right:
         {
-            std::cout << "RIGHT in moveInDirection" << "\n";
+            //std::cout << "RIGHT in moveInDirection" << "\n";
             if (getX() < (VIEW_HEIGHT - SPRITE_WIDTH) && !getWorld()->isThereBoulderInDirection(getX(), getY(), right, this)) {
                 moveTo(getX()+1, getY());
                 return true;
@@ -254,6 +254,8 @@ void Earth::doSomething()
 // Protestors
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: divide into regular and hardcore
+
 Protestor::Protestor(StudentWorld* world, int level): People(world, TID_PROTESTER, MAX_COORDINATE, MAX_COORDINATE, left, 5), m_leaving(false), m_stunned(false), m_level(level), m_tickNonRest(0)
 {
     m_ticksToWaitBetweenMoves = fmax(0, 3 - m_level / 4);
@@ -371,11 +373,7 @@ void Protestor::annoy(int damage)
         if (getHitPoint() <= 0) {
             getWorld()->playSound(SOUND_PROTESTER_GIVE_UP);
             
-            //Increasing the score based on how the protester was annoyed
-//            if(damage == 2)
-//                getWorld()->increaseScore(scoreFromSquirt);
-//            else
-//                getWorld()->increaseScore(SCORE_PROTESTER_BONKED);
+            // TODO: Increase score by annoying Protestor
             
             m_leaving = true;
             m_tickRest = m_ticksToWaitBetweenMoves;
@@ -486,15 +484,18 @@ bool Protestor::sittingAtIntersection()
 // Goodies // includes oil, gold, water
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Goodie::Goodie(StudentWorld* world, int imageID, int startX, int startY, bool isDisplayed): Actor(world, imageID, startX, startY, right, 1.0, 2, true) {}
+Goodie::Goodie(StudentWorld* world, int imageID, int startX, int startY, int score, int sound, bool isDisplayed): Actor(world, imageID, startX, startY, right, 1.0, 2, isDisplayed), m_sound(sound), m_score(score) {}
 
-bool Goodie::isPickedUp()
+//Otherwise, if the Barrel is within a radius of 3.0 (<= 3.00 units away) from the TunnelMan,
+bool Goodie::isPickupAbleByTunnelMan(const double &distance)
 {
-    // if within a distance
-    setDead();
-    getWorld()->playSound(SOUND_GOT_GOODIE);
-    // increase score
-    return true;
+    if (distance <= 3.0) {
+        setDead();
+        getWorld()->playSound(m_sound);
+        getWorld()->increaseScore(m_score);
+        return true;
+    }
+    return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -502,15 +503,37 @@ bool Goodie::isPickedUp()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-Gold::Gold(StudentWorld * world,  int startX, int startY, bool isDisplayed, bool isDropped): Goodie(world, TID_GOLD, startX, startY, isDisplayed) {}//, m_isDropped(isDropped) {}
+Gold::Gold(StudentWorld * world,  int startX, int startY, bool isDropped, bool isDisplayed): Goodie(world, TID_GOLD, startX, startY, 10, SOUND_GOT_GOODIE, isDisplayed), m_isPickupAbleByTunnelMan(isDropped) {}
 
+void Gold::doSomething()
+{
+    if (!isAlive())
+        return;
 
+    if (m_isPickupAbleByTunnelMan) {
+        
+        double d = getWorld()->getDistanceFromTunnelMan(getX(), getY());
+        
+        if (!isVisible() && d <= 4.0) {
+            std::cout << "oil이 거리 안에 있음 보여라 얍" << "\n";
+            setVisible(true);
+            return;
+        }
+        
+        else if(isPickupAbleByTunnelMan(d)) {
+            //TODO: add gold to TunnelMan's inventory
+        }
+    }
+    
+    //TODO: if tunnelman dropped it
+    // isPickupAbleByProtestor();
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Oil Barrel
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-OilBarrel::OilBarrel(StudentWorld* world, int startX, int startY): Goodie(world, TID_BARREL, startX, startY, false) {};
+OilBarrel::OilBarrel(StudentWorld* world, int startX, int startY): Goodie(world, TID_BARREL, startX, startY, 1000, SOUND_FOUND_OIL, false) {};
 
 void OilBarrel::doSomething()
 {
@@ -519,15 +542,16 @@ void OilBarrel::doSomething()
 
 // Otherwise, if the Barrel is not currently visible and the TunnelMan is within a radius of 4.0 of it (<= 4.00 units away)
 
-    if (!isVisible()) {// && distance <= 4.0
+    double d = getWorld()->getDistanceFromTunnelMan(getX(), getY());
+    
+    if (!isVisible() &&  d <= 4.0) {
         setVisible(true);
         return;
 
 //Otherwise, if the Barrel is within a radius of 3.0 (<= 3.00 units away) from the
 // TunnelMan, then the Barrel will activate,
-    } else {
-        setDead();
-        getWorld()->playSound(SOUND_FOUND_OIL);
+    } else if (isPickupAbleByTunnelMan(d)){
+        getWorld()->decreaseNumOfBarrels();
     }
 }
 
