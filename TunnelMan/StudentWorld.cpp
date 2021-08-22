@@ -27,9 +27,11 @@ int StudentWorld::move()
         TunnelManActorsDoSomething();
         initProtestors();
         // TODO: destroy dead objects
+        initSonarAndWaterPool();
         ++m_tick;
         
-        if (m_numOfBarrelsLeft == 0) return GWSTATUS_FINISHED_LEVEL;
+        if (m_numOfBarrelsLeft == 0)
+            return GWSTATUS_FINISHED_LEVEL;
         
         return GWSTATUS_CONTINUE_GAME;
     }
@@ -116,6 +118,34 @@ void StudentWorld::initBarrelsAndGold()
     generateBarrelsAndGold(numOfGold, 'G');
 }
 
+void StudentWorld::initSonarAndWaterPool()
+{
+    int goodieChance = (getLevel() * 25) + 300;
+    
+    if (rand() % goodieChance == 0) {
+        
+        int tickLife = fmax(100, 300 - 10 * getLevel());
+        int sonarChance = rand() % 5;
+        
+        // Sonar
+        if (sonarChance == 0) {
+            //m_actors.push_back(new Sonar(this, 0, MAX_COORDINATE, tickLife)));
+        }
+        
+        // Water pool
+        else {
+            int x, y;
+            generateRandomCoordinates(x, y);
+
+            //Generate new random coordinates until the area is clear of earth and objects
+            while (isThereEarthAtPoint(x, y) || isThereObjectAtPoint(x, y)) {
+                generateRandomCoordinates(x, y);
+            }
+            m_actors.push_back(new WaterPool(this, x, y, tickLife));
+        }
+    }
+}
+
 void StudentWorld::generateRandomCoordinates(int &x, int &y) const
 {
     x = rand() % (MAX_COORDINATE + 1);
@@ -129,7 +159,7 @@ void StudentWorld::generateBarrelsAndGold(const int numOfObjects, const char obj
 
     for (int i = 0; i < numOfObjects; ++i) {
         //Generate new coordinates until area is clear
-        while (!noObjectsAtPoint(x, y) || ((x > (30 - SPRITE_WIDTH)) && x < 34 && y > 0)) {
+        while (isThereObjectAtPoint(x, y) || ((x > (30 - SPRITE_WIDTH)) && x < 34 && y > 0)) {
             generateRandomCoordinates(x, y);
         }
 
@@ -304,7 +334,7 @@ bool StudentWorld::isProtestorFacingTunnelMan(int x, int y, GraphObject::Directi
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-bool StudentWorld::noObjectsAtPoint(const int x, const int y)
+bool StudentWorld::isThereObjectAtPoint(const int x, const int y)
 {
     double d;
     std::vector<Actor*>::iterator it;
@@ -312,10 +342,10 @@ bool StudentWorld::noObjectsAtPoint(const int x, const int y)
     
     while (it != m_actors.end()) {
         d = getDistance(x, y, (*it)->getX(), (*it)->getY());
-        if (d < 6) return false;
+        if (d < 6) return true;
         ++it;
     }
-    return true;
+    return false;
 }
 
 bool StudentWorld::isThereEarthAtPoint(int x, int y)
@@ -379,6 +409,23 @@ void StudentWorld::decreaseNumOfProtestors()
 void StudentWorld::decreaseNumOfBarrels()
 {
     --this->m_numOfBarrelsLeft;
+}
+
+void StudentWorld::addToInventory(std::string object)
+{
+    if (object == "gold") {
+        m_tunnelMan->increaseGold();
+        return;
+    }
+    if (object == "sonar") {
+        m_tunnelMan->increaseSonar();
+        return;
+    }
+    if (object == "squirt") {
+        m_tunnelMan->increaseSquirt();
+        return;
+    }
+    return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -320,7 +320,7 @@ void Protestor::doSomething()
     
     else if (getWorld()->getDistanceFromTunnelMan(getX(), getY()) <= 4.0 && getWorld()->isProtestorFacingTunnelMan(getX(), getY(), getDirection()))
     {
-        if (m_tickNonRest - m_tickRest >= 15) {
+        if (m_tickNonRest - m_tickNonRestSinceShouted >= 15) {
             //getWorld()->shoutAtTunnelMan();
             m_tickNonRestSinceShouted = m_tickNonRest;
         }
@@ -353,11 +353,9 @@ void Protestor::doSomething()
     }
     
     else {
-        if (m_tickNonRest - m_tickSinceLastTurn >= 200) {
-            if (sittingAtIntersection()) {
-                m_tickSinceLastTurn = m_tickNonRest;
-                setNumSquaresToMoveInCurrentDirection();
-            }
+        if (m_tickNonRest - m_tickSinceLastTurn >= 200 && sittingAtIntersection()) {
+            m_tickSinceLastTurn = m_tickNonRest;
+            setNumSquaresToMoveInCurrentDirection();
         }
     }
     protestorMove();
@@ -484,7 +482,7 @@ bool Protestor::sittingAtIntersection()
 // Goodies // includes oil, gold, water
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Goodie::Goodie(StudentWorld* world, int imageID, int startX, int startY, int score, int sound, bool isDisplayed): Actor(world, imageID, startX, startY, right, 1.0, 2, isDisplayed), m_sound(sound), m_score(score) {}
+Goodie::Goodie(StudentWorld* world, int imageID, int startX, int startY, int score, int sound, int maxTickLife, bool isDisplayed): Actor(world, imageID, startX, startY, right, 1.0, 2, isDisplayed), m_sound(sound), m_score(score) {}
 
 //Otherwise, if the Barrel is within a radius of 3.0 (<= 3.00 units away) from the TunnelMan,
 bool Goodie::isPickupAbleByTunnelMan(const double &distance)
@@ -498,12 +496,26 @@ bool Goodie::isPickupAbleByTunnelMan(const double &distance)
     return false;
 }
 
+void Goodie::increaseTickPassed()
+{
+    ++m_tick;
+}
+
+int Goodie::getTickPassed()
+{
+    return m_tick;
+}
+
+int Goodie::getMaxTickLife()
+{
+    return m_maxTickLife;
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Gold
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-Gold::Gold(StudentWorld * world,  int startX, int startY, bool isDropped, bool isDisplayed): Goodie(world, TID_GOLD, startX, startY, 10, SOUND_GOT_GOODIE, isDisplayed), m_isPickupAbleByTunnelMan(isDropped) {}
+Gold::Gold(StudentWorld * world,  int startX, int startY, bool isDropped, bool isDisplayed): Goodie(world, TID_GOLD, startX, startY, 10, SOUND_GOT_GOODIE, 100, isDisplayed), m_isPickupAbleByTunnelMan(isDropped) {}
 
 void Gold::doSomething()
 {
@@ -521,7 +533,7 @@ void Gold::doSomething()
         }
         
         else if(isPickupAbleByTunnelMan(d)) {
-            //TODO: add gold to TunnelMan's inventory
+            getWorld()->addToInventory("gold");
         }
     }
     
@@ -533,7 +545,7 @@ void Gold::doSomething()
 // Oil Barrel
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-OilBarrel::OilBarrel(StudentWorld* world, int startX, int startY): Goodie(world, TID_BARREL, startX, startY, 1000, SOUND_FOUND_OIL, false) {};
+OilBarrel::OilBarrel(StudentWorld* world, int startX, int startY): Goodie(world, TID_BARREL, startX, startY, 1000, SOUND_FOUND_OIL, 0, false) {};
 
 void OilBarrel::doSomething()
 {
@@ -552,6 +564,32 @@ void OilBarrel::doSomething()
 // TunnelMan, then the Barrel will activate,
     } else if (isPickupAbleByTunnelMan(d)){
         getWorld()->decreaseNumOfBarrels();
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Waterpool
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+WaterPool::WaterPool(StudentWorld * world, int startX, int startY, int maxTickLife): Goodie(world, TID_WATER_POOL, startX, startY, 100, SOUND_GOT_GOODIE, maxTickLife, true)
+{}
+//------------------------------------------
+void WaterPool::doSomething()
+{
+    if (!isAlive())
+        return;
+
+    if (getTickPassed() == getMaxTickLife())
+        setDead();
+    else
+    {
+        double d = getWorld()->getDistanceFromTunnelMan(getX(), getY());
+
+        if (isPickupAbleByTunnelMan(d))
+            getWorld()->addToInventory("squirt");
+
+        increaseTickPassed();
     }
 }
 

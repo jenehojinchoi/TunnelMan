@@ -43,7 +43,7 @@ public:
     bool isProtestorFacingTunnelMan(int x, int y, GraphObject::Direction direction);
     
     // at point
-    bool noObjectsAtPoint(const int x, const int y);
+    bool isThereObjectAtPoint(const int x, const int y);
     bool isThereEarthAtPoint(int x, int y);
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,6 +59,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void decreaseNumOfProtestors();
     void decreaseNumOfBarrels();
+    void addToInventory(std::string object);
     
 private:
     int m_tick;
@@ -82,6 +83,7 @@ private:
     void initTunnelMan();
     void initProtestors();
     void initBarrelsAndGold();
+    void initSonarAndWaterPool();
     
     void generateRandomCoordinates(int &x, int &y) const;
     void generateBarrelsAndGold(const int numOfObjects, const char object);

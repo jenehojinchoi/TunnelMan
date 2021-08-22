@@ -174,13 +174,17 @@ private:
 class Goodie: public Actor
 {
 public:
-    Goodie(StudentWorld* world, int imageID, int startX, int startY, int score, int sound, bool isDisplayed);
+    Goodie(StudentWorld* world, int imageID, int startX, int startY, int score, int sound, int maxTickLife, bool isDisplayed);
     bool isPickupAbleByTunnelMan(const double &distance);
+    void increaseTickPassed();
+    int getTickPassed();
+    int getMaxTickLife();
     
 private:
     int m_sound;
     int m_score;
-    int m_tick;
+    int m_tick;         // check ticks passed
+    int m_maxTickLife;  // check max tick life of goodies
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -226,7 +230,7 @@ public:
 
 class WaterPool: public Goodie {
 public:
-    WaterPool(StudentWorld* world, int startX, int startY);
+    WaterPool(StudentWorld* world, int startX, int startY, int maxTickLife);
     void doSomething() override;
 };
 
