@@ -194,7 +194,7 @@ private:
 class Gold: public Goodie
 {
 public:
-    Gold(StudentWorld* world, int startX, int startY, bool dropped, bool isDisplayed);
+    Gold(StudentWorld* world, int startX, int startY, bool isPickupAble, bool isDisplayed);
     void doSomething() override;
     //TODO: void isPickupAbleByProtestor();
 

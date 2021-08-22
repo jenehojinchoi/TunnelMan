@@ -26,8 +26,8 @@ int StudentWorld::move()
         setDisplayText();
         TunnelManActorsDoSomething();
         initProtestors();
-        // TODO: destroy dead objects
         initSonarAndWaterPool();
+        clearDeadActors();
         ++m_tick;
         
         if (m_numOfBarrelsLeft == 0)
@@ -454,4 +454,21 @@ void StudentWorld::TunnelManActorsDoSomething()
     m_tunnelMan->doSomething();
     for (std::vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); ++it)
         (*it)->doSomething();
+}
+
+
+void StudentWorld::clearDeadActors()
+{
+    std::vector<Actor*>::iterator it = m_actors.begin();
+    
+    while (it != m_actors.end()) {
+        if (!((*it)->isAlive())) {
+            (*it)->setVisible(false); // made it set invisible
+            (*it) = nullptr;
+            m_actors.erase(it);
+            it = m_actors.begin();
+        }
+        else
+            ++it;
+    }
 }

@@ -36,7 +36,6 @@ public:
     bool shiftCoordinates(int &x, int &y, const int amountToShift, GraphObject::Direction directionToShift) const;
     
     // direction
-    
     bool isThereBoulderInDirection(int x, int y, GraphObject::Direction direction, Actor *actor);
     bool isThereEarthInDirection(int x, int y, GraphObject::Direction direction);
     bool isThereTunnelManInLine(int x, int y, GraphObject::Direction &direction);
@@ -84,6 +83,8 @@ private:
     void initProtestors();
     void initBarrelsAndGold();
     void initSonarAndWaterPool();
+    
+    void clearDeadActors();
     
     void generateRandomCoordinates(int &x, int &y) const;
     void generateBarrelsAndGold(const int numOfObjects, const char object);

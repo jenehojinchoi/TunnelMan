@@ -515,19 +515,20 @@ int Goodie::getMaxTickLife()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-Gold::Gold(StudentWorld * world,  int startX, int startY, bool isDropped, bool isDisplayed): Goodie(world, TID_GOLD, startX, startY, 10, SOUND_GOT_GOODIE, 100, isDisplayed), m_isPickupAbleByTunnelMan(isDropped) {}
+Gold::Gold(StudentWorld * world,  int startX, int startY, bool isPickupAble, bool isDisplayed): Goodie(world, TID_GOLD, startX, startY, 10, SOUND_GOT_GOODIE, 100, isDisplayed), m_isPickupAbleByTunnelMan(isPickupAble) {}
 
 void Gold::doSomething()
 {
-    if (!isAlive())
+    if (!isAlive()) {
+        std::cout << "setDead 되는 거 맞냐 " <<"\n";
         return;
+    }
 
     if (m_isPickupAbleByTunnelMan) {
         
         double d = getWorld()->getDistanceFromTunnelMan(getX(), getY());
         
         if (!isVisible() && d <= 4.0) {
-            std::cout << "oil이 거리 안에 있음 보여라 얍" << "\n";
             setVisible(true);
             return;
         }
@@ -549,8 +550,10 @@ OilBarrel::OilBarrel(StudentWorld* world, int startX, int startY): Goodie(world,
 
 void OilBarrel::doSomething()
 {
-    if (!isAlive())
+    if (!isAlive()) {
+        std::cout << "setDead 되는 거 맞냐 " <<"\n";
         return;
+    }
 
 // Otherwise, if the Barrel is not currently visible and the TunnelMan is within a radius of 4.0 of it (<= 4.00 units away)
 
@@ -580,10 +583,12 @@ void WaterPool::doSomething()
     if (!isAlive())
         return;
 
-    if (getTickPassed() == getMaxTickLife())
+    if (getTickPassed() == getMaxTickLife()) {
+        std::cout << "setDead 되는 거 맞냐 " <<"\n";
         setDead();
-    else
-    {
+    }
+    
+    else {
         double d = getWorld()->getDistanceFromTunnelMan(getX(), getY());
 
         if (isPickupAbleByTunnelMan(d))
