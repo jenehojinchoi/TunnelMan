@@ -404,7 +404,12 @@ void StudentWorld::digEarth(int x, int y)
             }
         }
     }
-    
+}
+
+void StudentWorld::shootWithSquirt()
+{
+    m_actors.push_back(new Squirt(this, m_tunnelMan->getX(), m_tunnelMan->getY(), m_tunnelMan->getDirection()));
+    playSound(SOUND_PLAYER_SQUIRT);
 }
 
 void StudentWorld::activateSonar(int x, int y, int radius)
@@ -447,21 +452,38 @@ void StudentWorld::dropGold(Gold* gold)
     m_actors.push_back(gold);
 }
 
-void StudentWorld::checkBoulderHitsPeople(const int x, const int y)
+void StudentWorld::boulderHitsPeople(const int x, const int y)
 {
     std::cout << "checkBoulderHitsPeople??? " << "\n";
     for (vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++) {
         if ((*it)->canBeAnnoyed()) { // check if people (protestor)
             double d = getDistance(x, y, (*it)->getX(), (*it)->getY());
-            if (d <= 3.0) (*it)->annoy(100);
+            if (d <= 3.0) (*it)->getsAttacked(100);
         }
     }
     
     // check if tunnelman
     double d2 = getDistanceFromTunnelMan(x, y);
     if (d2 <= 6.0) { // double 3.0
-        m_tunnelMan->annoy(100);
+        m_tunnelMan->getsAttacked(100);
     }
+}
+
+bool StudentWorld::squirtHits(const int x, const int y)
+{
+    for (std::vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+    {
+        // check protestors
+        if ((*it)->canBeAnnoyed()) {
+            double d = getDistance(x, y, (*it)->getX(), (*it)->getY());
+            
+            if (d <= 3.0) {
+                (*it)->getsAttacked(2); // if protestor was annoyed, return true
+                return true;
+            }
+        }
+    }
+    return false; // protestor not annoyed
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

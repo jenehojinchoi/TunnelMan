@@ -51,10 +51,12 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     void digEarth(int x, int y);
+    void shootWithSquirt();
     void activateSonar(int x, int y, int radius);
     bool checkForBribes(const int x, const int y);
     void dropGold(Gold* gold);
-    void checkBoulderHitsPeople(const int x, const int y);
+    void boulderHitsPeople(const int x, const int y);
+    bool squirtHits(const int x, const int y);
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // keeping track of games

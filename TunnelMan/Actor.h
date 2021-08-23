@@ -23,7 +23,7 @@ public:
     virtual void doSomething() = 0;
     bool isAlive();
     void setDead();
-    virtual void annoy(int damage);
+    virtual void getsAttacked(int damage);
     virtual bool canBeAnnoyed() const;
     virtual bool getBribed();
     
@@ -83,7 +83,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     void doSomething() override;
-    void annoy(int damage) override;
+    void getsAttacked(int damage) override;
     void shoot();
     
 private:
@@ -127,7 +127,7 @@ private:
 class Squirt: public Actor
 {
 public:
-    Squirt(int startX, int startY);
+    Squirt(StudentWorld* world, int startX, int startY, GraphObject::Direction d);
     virtual void doSomething();
 
 private:
@@ -144,7 +144,7 @@ class Protestor: public People
 public:
     Protestor(StudentWorld* world, int level);
     virtual void doSomething() override;
-    void annoy(int damage) override;
+    void getsAttacked(int damage) override;
     bool getBribed() override;
     
 private:

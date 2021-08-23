@@ -32,7 +32,7 @@ StudentWorld* Actor::getWorld()
 }
 
 
-void Actor::annoy(int damage) {};
+void Actor::getsAttacked(int damage) {};
 
 bool Actor::getBribed()
 {
@@ -220,7 +220,10 @@ void TunnelMan::doSomething()
             }
                 
             case KEY_PRESS_SPACE:
-                // TODO: shoot()
+                if (m_squirt > 0) {
+                    m_squirt--;
+                    getWorld()->shootWithSquirt();
+                }
                 break;
             case 'z':
             case 'Z':
@@ -239,7 +242,7 @@ void TunnelMan::doSomething()
     }
 }
 
-void TunnelMan::annoy(int damage)
+void TunnelMan::getsAttacked(int damage)
 {
     std::cout << "///////////////////////////////////////////////////////" << "\n";
     std::cout << "TunnelMan annoy called" << "\n";
@@ -267,7 +270,7 @@ Boulder::Boulder(StudentWorld* world, int startX, int startY, bool isDisplayed):
 
 void Boulder::fall()
 {
-    getWorld()->checkBoulderHitsPeople(getX(), getY());
+    getWorld()->boulderHitsPeople(getX(), getY());
     
     if (!getWorld()->isThereEarthInDirection(getX(), getY(), down) && !getWorld()->isThereBoulderInDirection(getX(), getY(), down, this))
     {
@@ -302,6 +305,35 @@ void Boulder::doSomething()
     }
 }
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Squirt
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Squirt::Squirt(StudentWorld* world, int startX, int startY, GraphObject::Direction d): Actor(world, TID_WATER_SPURT, startX, startY, d, 1.0, 1), m_ticksAlive(0) {}
+
+void Squirt::doSomething()
+{
+    if(!isAlive())
+        return;
+    
+    if (m_ticksAlive == 4) {
+        setDead();
+        return;
+    }
+    
+    if (getWorld()->squirtHits(getX(), getY())) {
+        setDead();
+        return;
+    }
+    
+    if (!getWorld()->isThereEarthInDirection(getX(), getY(), getDirection()) && !moveInDirection(getDirection()))
+        setDead();
+    //hits boulder or Earth
+    else setDead();
+    
+    ++m_ticksAlive;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Protestors
@@ -410,7 +442,7 @@ void Protestor::doSomething()
     m_tickNonRest++;
 }
 
-void Protestor::annoy(int damage)
+void Protestor::getsAttacked(int damage)
 {
     if (!m_leaving) {
         takeDamage(damage);
