@@ -51,10 +51,8 @@ bool Actor::moveInDirection(Direction direction)
     switch(direction) {
         case left:
         {
-            //std::cout << "LEFT in moveInDirection" << "\n";
             if (getX() > 0 && !getWorld()->isThereBoulderInDirection(getX(), getY(), left, this)) {
                 moveTo(getX()-1, getY());
-                //std::cout << "should've moved to left" << "\n";
                 return true;
             }
             return false;
@@ -62,7 +60,6 @@ bool Actor::moveInDirection(Direction direction)
             
         case right:
         {
-            //std::cout << "RIGHT in moveInDirection" << "\n";
             if (getX() < (VIEW_HEIGHT - SPRITE_WIDTH) && !getWorld()->isThereBoulderInDirection(getX(), getY(), right, this)) {
                 moveTo(getX()+1, getY());
                 return true;
@@ -167,7 +164,6 @@ void TunnelMan::doSomething()
                 break;
             case KEY_PRESS_LEFT:
             {
-                //std::cout << "LEFT in doSomething" << "\n";
                 if (getDirection() == left) {
                     if (moveInDirection(left)) {
                         if (getWorld()->isThereEarthAtPoint(getX(), getY()))
@@ -180,7 +176,6 @@ void TunnelMan::doSomething()
                 
             case KEY_PRESS_RIGHT:
             {
-                //std::cout << "RIGHT in doSomething" << "\n";
                 if (getDirection() == right) {
                     if (moveInDirection(right)) {
                         if (getWorld()->isThereEarthAtPoint(getX(), getY()))
@@ -216,7 +211,7 @@ void TunnelMan::doSomething()
             }
                 
             case KEY_PRESS_SPACE:
-                // shoot()
+                // TODO: shoot()
                 break;
             case 'z':
             case 'Z':
@@ -300,7 +295,8 @@ void Protestor::protestorMove()
 
 void Protestor::doSomething()
 {
-    if (!isAlive()) return;
+    if (!isAlive())
+        return;
     
     if (m_tickRest < m_ticksToWaitBetweenMoves) {
         m_tickRest++;
@@ -308,7 +304,6 @@ void Protestor::doSomething()
     }
 
     if (m_stunned) {
-        //Resetting how long the protester has to wait because it's not stunned anymore
         m_ticksToWaitBetweenMoves = fmax(0, 3 - m_level / 4);
         m_stunned = false;
     }
@@ -322,7 +317,7 @@ void Protestor::doSomething()
     else if (getWorld()->getDistanceFromTunnelMan(getX(), getY()) <= 4.0 && getWorld()->isProtestorFacingTunnelMan(getX(), getY(), getDirection()))
     {
         if (m_tickNonRest - m_tickNonRestSinceShouted >= 15) {
-            //getWorld()->shoutAtTunnelMan();
+            //TODO: shout at TunnelMan;
             m_tickNonRestSinceShouted = m_tickNonRest;
         }
         m_tickRest = 0;
@@ -340,12 +335,10 @@ void Protestor::doSomething()
     
     --numSquaresToMoveInCurrentDirection;
 
-    // cannot directly see the TunnelMan
     
     if (numSquaresToMoveInCurrentDirection <= 0) {
         setRandomDirection();
 
-        // If the random direction is blocked either by Earth or a Boulder such that it can’t take even a single step in that chosen direction, then it will select a different direction and check it for blockage (it will continue checking directions until it has picked a direction that is not blocked).
         while (getWorld()->isThereEarthInDirection(getX(), getY(), getDirection()) || getWorld()->isThereBoulderInDirection(getX(), getY(), getDirection(), nullptr)) {
             setRandomDirection();
         }
@@ -417,15 +410,8 @@ void Protestor::setRandomDirection()
     }
 }
 
-// is sitting at an intersection where it could turn and move at least one square in a perpendicular direction from its currently facing direction (e.g., it is currently facing left, and is at a junction where it could turn and move one step either upward/downward without being blocked by Earth or a Boulder), and The Regular Protester hasn’t made a perpendicular turn in the last 200 non- resting ticks.
-
 bool Protestor::sittingAtIntersection()
 {
-    
-//    Determine which of the two perpendicular directions are viable (a viable
-//    direction is one that allows movement of at least one square without the
-//    Regular Protester being blocked by Earth or a Boulder).
-    
     Direction direction1 = none;
     Direction direction2 = none;
 
@@ -532,10 +518,8 @@ Gold::Gold(StudentWorld * world,  int startX, int startY, bool isPickupAble, boo
 
 void Gold::doSomething()
 {
-    if (!isAlive()) {
-        std::cout << "setDead 되는 거 맞냐 " <<"\n";
+    if (!isAlive())
         return;
-    }
 
     if (m_isPickupAbleByTunnelMan) {
         
@@ -578,10 +562,8 @@ OilBarrel::OilBarrel(StudentWorld* world, int startX, int startY): Goodie(world,
 
 void OilBarrel::doSomething()
 {
-    if (!isAlive()) {
-        std::cout << "setDead 되는 거 맞냐 " <<"\n";
+    if (!isAlive())
         return;
-    }
 
 // Otherwise, if the Barrel is not currently visible and the TunnelMan is within a radius of 4.0 of it (<= 4.00 units away)
 
@@ -611,10 +593,8 @@ void WaterPool::doSomething()
     if (!isAlive())
         return;
 
-    if (getTickPassed() == getMaxTickLife()) {
-        std::cout << "setDead 되는 거 맞냐 " <<"\n";
+    if (getTickPassed() == getMaxTickLife())
         setDead();
-    }
     
     else {
         double d = getWorld()->getDistanceFromTunnelMan(getX(), getY());

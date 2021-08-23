@@ -84,7 +84,6 @@ void StudentWorld::setDisplayText()
 
 int StudentWorld::init()
 {
-    std::cout << "StudentWorld::init" << "\n";
     initEarth();
     initTunnelMan();
     
@@ -169,14 +168,12 @@ void StudentWorld::generateBarrelsAndGold(const int numOfObjects, const char obj
             case 'B':
             {
                 m_actors.push_back(new OilBarrel(this, x, y));
-                std::cout<<"generateBarrelsAndGold: OilBarrel!!" << "\n";
                 break;
             }
             // gold
             case 'G':
             {
                 m_actors.push_back(new Gold(this, x, y, true, false));
-                std::cout<<"generateBarrelsAndGold: Gold!!" << "\n";
                 break;
             }
         }
