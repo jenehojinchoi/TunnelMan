@@ -128,7 +128,7 @@ void StudentWorld::initSonarAndWaterPool()
         
         // Sonar
         if (sonarChance == 0) {
-            //m_actors.push_back(new Sonar(this, 0, MAX_COORDINATE, tickLife)));
+            m_actors.push_back(new Sonar(this, 0, MAX_COORDINATE, tickLife));
         }
         
         // Water pool

@@ -221,7 +221,7 @@ public:
 class Sonar: public Goodie
 {
 public:
-    Sonar(StudentWorld* world, int startX, int startY);
+    Sonar(StudentWorld* world, int startX, int startY, int maxTickLife);
     void doSomething() override;
 };
 

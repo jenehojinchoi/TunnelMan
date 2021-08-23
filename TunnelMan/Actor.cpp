@@ -606,3 +606,29 @@ void WaterPool::doSomething()
     }
 }
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Sonar
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+Sonar::Sonar(StudentWorld * world, int startX, int startY, int maxTickLife): Goodie(world, TID_SONAR, startX, startY, 75, SOUND_GOT_GOODIE, maxTickLife, true)
+{}
+//------------------------------------------
+void Sonar::doSomething()
+{
+    if (!isAlive())
+        return;
+
+    if (getTickPassed() == getMaxTickLife())
+        setDead();
+    
+    else {
+        double d = getWorld()->getDistanceFromTunnelMan(getX(), getY());
+
+        if (isPickupAbleByTunnelMan(d))
+            getWorld()->addToInventory("sonar");
+
+        increaseTickPassed();
+    }
+}
