@@ -51,7 +51,8 @@ public:
     
     void digEarth(int x, int y);
     void activateSonar(int x, int y, int radius);
-    //void dropGold(Gold* gold);
+    bool checkForBribes(const int x, const int y);
+    void dropGold(Gold* gold);
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // keeping track of games

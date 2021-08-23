@@ -360,6 +360,8 @@ bool StudentWorld::isThereEarthAtPoint(int x, int y)
 }
 
 
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // action functions
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -396,6 +398,27 @@ void StudentWorld::activateSonar(int x, int y, int radius)
     playSound(SOUND_SONAR);
 }
 
+bool StudentWorld::checkForBribes(const int x, const int y)
+{
+    double d;
+    for (vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); ++it) {
+        if((*it)->canBeAnnoyed()) {
+            d = getDistance(x, y, (*it)->getX(), (*it)->getY());
+        
+            if (d <= 3.0 && (*it)->getID() == TID_PROTESTER) {
+                if((*it)->getBribed())
+                    return true;    //Protester was bribed
+            }
+        }
+    }
+    return false;
+}
+
+
+void StudentWorld::dropGold(Gold* gold)
+{
+    m_actors.push_back(gold);
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // keeping track of games

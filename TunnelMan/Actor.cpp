@@ -34,6 +34,11 @@ StudentWorld* Actor::getWorld()
 
 void Actor::annoy(int damage) {};
 
+bool Actor::getBribed()
+{
+    return false;
+}
+
 bool Actor::canBeAnnoyed() const
 {
     return false;
@@ -225,7 +230,7 @@ void TunnelMan::doSomething()
             case KEY_PRESS_TAB:
                 if (m_gold > 0) {
                     m_gold--;
-                    //getWorld()->dropGold(new Gold(getWorld(), getX(), getY(), true, true));
+                    getWorld()->dropGold(new Gold(getWorld(), getX(), getY(), false, true));
                 }
                 break;
         }
@@ -279,11 +284,7 @@ void Protestor::leaveOilField()
     }
     
     else {
-//        Direction directionTowardsExit = getWorld()->getDirectionToExit(getX(), getY());
-//        setDirection(directionTowardsExit);
-        setRandomDirection();
-        Direction d = getDirection();
-        moveInDirection(d);
+        // TODO: direct Protestor towards exit
     }
     
 }
@@ -478,6 +479,17 @@ bool Protestor::sittingAtIntersection()
     return false;
 }
 
+bool Protestor::getBribed()
+{
+    if (!m_leaving) {
+        m_leaving = true;
+        getWorld()->playSound(SOUND_PROTESTER_FOUND_GOLD);
+        getWorld()->increaseScore(25);
+        return true;
+    }
+    return false;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Goodies // includes oil, gold, water
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -510,6 +522,7 @@ int Goodie::getMaxTickLife()
 {
     return m_maxTickLife;
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Gold
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -538,8 +551,23 @@ void Gold::doSomething()
         }
     }
     
-    //TODO: if tunnelman dropped it
-    // isPickupAbleByProtestor();
+    else isPickupAbleByProtestor();
+}
+
+void Gold::isPickupAbleByProtestor()
+{
+    if (getTickPassed() == getMaxTickLife()) {
+        setDead();
+    }
+    else {
+        if (getWorld()->checkForBribes(getX(), getY())) {
+            setDead();
+            getWorld()->playSound(SOUND_PROTESTER_FOUND_GOLD);
+            getWorld()->increaseScore(25);
+        }
+        
+        increaseTickPassed();
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

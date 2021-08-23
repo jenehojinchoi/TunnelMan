@@ -25,6 +25,7 @@ public:
     void setDead();
     virtual void annoy(int damage);
     virtual bool canBeAnnoyed() const;
+    virtual bool getBribed();
     
     StudentWorld* getWorld();
     bool moveInDirection(Direction direction);
@@ -141,7 +142,8 @@ class Protestor: public People
 public:
     Protestor(StudentWorld* world, int level);
     virtual void doSomething() override;
-    void annoy(int damage) override; // TODO:
+    void annoy(int damage) override;
+    bool getBribed() override;
     
 private:
     int m_ticksToWaitBetweenMoves;
@@ -156,7 +158,6 @@ private:
     bool m_leaving;
     bool m_stunned;
     
-    void getBribed();
     void leaveOilField();
     void protestorMove();
     void setNumSquaresToMoveInCurrentDirection();
@@ -196,7 +197,7 @@ class Gold: public Goodie
 public:
     Gold(StudentWorld* world, int startX, int startY, bool isPickupAble, bool isDisplayed);
     void doSomething() override;
-    //TODO: void isPickupAbleByProtestor();
+    void isPickupAbleByProtestor();
 
 private:
     bool m_isPickupAbleByTunnelMan;
