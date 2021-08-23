@@ -111,11 +111,13 @@ public:
 class Boulder: public Actor
 {
 public:
-    Boulder(int startX, int startY);
+    Boulder(StudentWorld* world, int startX, int startY, bool isDisplayed = true);
     virtual void doSomething();
+    void fall();
     
 private:
-    int m_ticksWaiting;
+    int m_tickWaiting;
+    int m_falling;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

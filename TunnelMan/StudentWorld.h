@@ -44,6 +44,7 @@ public:
     // at point
     bool isThereObjectAtPoint(const int x, const int y);
     bool isThereEarthAtPoint(int x, int y);
+    bool isAboveEarth(int x, int y);
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // action functions
@@ -53,6 +54,7 @@ public:
     void activateSonar(int x, int y, int radius);
     bool checkForBribes(const int x, const int y);
     void dropGold(Gold* gold);
+    void checkBoulderHitsPeople(const int x, const int y);
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // keeping track of games
@@ -72,7 +74,6 @@ private:
     Earth* m_earth[64][64];
     TunnelMan* m_tunnelMan;
 
-    
     void TunnelManActorsDoSomething();
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -84,10 +85,12 @@ private:
     void initProtestors();
     void initBarrelsAndGold();
     void initSonarAndWaterPool();
+    void initBoulder();
     
     void clearDeadActors();
     
     void generateRandomCoordinates(int &x, int &y) const;
+    void generateRandomCoordinatesForBoulder(int &x, int &y) const;
     void generateBarrelsAndGold(const int numOfObjects, const char object);
 };
 

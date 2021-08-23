@@ -86,7 +86,7 @@ int StudentWorld::init()
 {
     initEarth();
     initTunnelMan();
-    
+    initBoulder();
     initBarrelsAndGold();
     m_tick = 0;
     
@@ -145,18 +145,44 @@ void StudentWorld::initSonarAndWaterPool()
     }
 }
 
-void StudentWorld::generateRandomCoordinates(int &x, int &y) const
+void StudentWorld::initBoulder()
 {
-    x = rand() % (MAX_COORDINATE + 1);
-    y = rand() % (MAX_COORDINATE - SPRITE_WIDTH + 1);
+    int numOfBoulders = fmin((getLevel() / 2 + 2), 9);
+    int x, y;
+    generateRandomCoordinatesForBoulder(x, y);
+    
+    for (int i = 0; i < numOfBoulders; i++) {
+        generateRandomCoordinatesForBoulder(x, y);
+        
+        while (isThereObjectAtPoint(x, y) || ((x > (30 - SPRITE_WIDTH)) && x < 34 && y > 0)) {
+            generateRandomCoordinates(x, y);
+        }
+        
+        digEarth(x, y); // delete earth around boulders
+        m_actors.push_back(new Boulder(this, x, y, true));
+        break;
+    }
+    
 }
 
+void StudentWorld::generateRandomCoordinates(int &x, int &y) const
+{
+    x = rand() % 60 + 1;
+    y = rand() % 56 + 1;
+}
+
+//y coordinate 20-56 inclusive
+void StudentWorld::generateRandomCoordinatesForBoulder(int &x, int &y) const
+{
+    x = rand() % 60 + 1;
+    y = rand() % 36 + 21;
+}
 void StudentWorld::generateBarrelsAndGold(const int numOfObjects, const char object)
 {
     int x, y;
     generateRandomCoordinates(x, y);
 
-    for (int i = 0; i < numOfObjects; ++i) {
+    for (int i = 0; i < numOfObjects; i++) {
         //Generate new coordinates until area is clear
         while (isThereObjectAtPoint(x, y) || ((x > (30 - SPRITE_WIDTH)) && x < 34 && y > 0)) {
             generateRandomCoordinates(x, y);
@@ -251,8 +277,7 @@ bool StudentWorld::isThereBoulderInDirection(int x, int y, GraphObject::Directio
 
 bool StudentWorld::isThereEarthInDirection(int x, int y, GraphObject::Direction direction)
 {
-    switch (direction) //Determines whether to shift the x or y coordinate, and by how much
-    {
+    switch (direction) {
         case GraphObject::right:
         case GraphObject::up:
         {
@@ -269,7 +294,7 @@ bool StudentWorld::isThereEarthInDirection(int x, int y, GraphObject::Direction 
             return true;
     }
     
-    if (x < 0 || x >= VIEW_WIDTH || y < 0 || y >= VIEW_HEIGHT) return false;
+    if (x < 0 || x >= 64 || y < 0 || y >= 64) return false;
     
     if (direction == GraphObject::right || direction == GraphObject::left) {
         for (int i = y; i < y + 4; ++i) {
@@ -284,6 +309,14 @@ bool StudentWorld::isThereEarthInDirection(int x, int y, GraphObject::Direction 
     return false;
 }
 
+bool StudentWorld::isAboveEarth(int x, int y)
+{
+    for (int i = x; i < x + 4; i++) {
+        if (m_earth[i][y] != nullptr)
+            return true;
+    }
+    return false;
+}
 
 bool StudentWorld::isThereTunnelManInLine(int x, int y, GraphObject::Direction &direction)
 {
@@ -356,9 +389,6 @@ bool StudentWorld::isThereEarthAtPoint(int x, int y)
     return false;
 }
 
-
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // action functions
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -374,7 +404,7 @@ void StudentWorld::digEarth(int x, int y)
             }
         }
     }
-    playSound(SOUND_DIG);
+    
 }
 
 void StudentWorld::activateSonar(int x, int y, int radius)
@@ -415,6 +445,23 @@ bool StudentWorld::checkForBribes(const int x, const int y)
 void StudentWorld::dropGold(Gold* gold)
 {
     m_actors.push_back(gold);
+}
+
+void StudentWorld::checkBoulderHitsPeople(const int x, const int y)
+{
+    std::cout << "checkBoulderHitsPeople??? " << "\n";
+    for (vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++) {
+        if ((*it)->canBeAnnoyed()) { // check if people (protestor)
+            double d = getDistance(x, y, (*it)->getX(), (*it)->getY());
+            if (d <= 3.0) (*it)->annoy(100);
+        }
+    }
+    
+    // check if tunnelman
+    double d2 = getDistanceFromTunnelMan(x, y);
+    if (d2 <= 6.0) { // double 3.0
+        m_tunnelMan->annoy(100);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

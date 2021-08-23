@@ -102,6 +102,7 @@ bool People::canBeAnnoyed() const
 
 void People::takeDamage(int damage)
 {
+    std::cout << "불리긴 함? " << "\n";
     m_hitPoint -= damage;
 }
 
@@ -166,8 +167,10 @@ void TunnelMan::doSomething()
             {
                 if (getDirection() == left) {
                     if (moveInDirection(left)) {
-                        if (getWorld()->isThereEarthAtPoint(getX(), getY()))
+                        if (getWorld()->isThereEarthAtPoint(getX(), getY())) {
                             getWorld()->digEarth(getX(), getY());
+                            getWorld()->playSound(SOUND_DIG);
+                        }
                     }
                 }
                 else setDirection(left);
@@ -178,8 +181,10 @@ void TunnelMan::doSomething()
             {
                 if (getDirection() == right) {
                     if (moveInDirection(right)) {
-                        if (getWorld()->isThereEarthAtPoint(getX(), getY()))
+                        if (getWorld()->isThereEarthAtPoint(getX(), getY())) {
                             getWorld()->digEarth(getX(), getY());
+                            getWorld()->playSound(SOUND_DIG);
+                        }
                     }
                 }
                 else setDirection(right);
@@ -190,8 +195,10 @@ void TunnelMan::doSomething()
             {
                 if (getDirection() == up) {
                     if (moveInDirection(up)) {
-                        if (getWorld()->isThereEarthAtPoint(getX(), getY()))
+                        if (getWorld()->isThereEarthAtPoint(getX(), getY())) {
                             getWorld()->digEarth(getX(), getY());
+                            getWorld()->playSound(SOUND_DIG);
+                        }
                     }
                 }
                 else setDirection(up);
@@ -202,8 +209,10 @@ void TunnelMan::doSomething()
             {
                 if (getDirection() == down) {
                     if (moveInDirection(down)) {
-                        if (getWorld()->isThereEarthAtPoint(getX(), getY()))
+                        if (getWorld()->isThereEarthAtPoint(getX(), getY())) {
                             getWorld()->digEarth(getX(), getY());
+                            getWorld()->playSound(SOUND_DIG);
+                        }
                     }
                 }
                 else setDirection(down);
@@ -218,8 +227,6 @@ void TunnelMan::doSomething()
                 if (m_sonar > 0) {
                     m_sonar--;
                     getWorld()->activateSonar(getX(), getY(), 12);
-                    
-                    getWorld()->playSound(SOUND_SONAR);
                 }
                 break;
             case KEY_PRESS_TAB:
@@ -234,6 +241,8 @@ void TunnelMan::doSomething()
 
 void TunnelMan::annoy(int damage)
 {
+    std::cout << "///////////////////////////////////////////////////////" << "\n";
+    std::cout << "TunnelMan annoy called" << "\n";
     takeDamage(damage);
     if(getHitPoint() <= 0) setDead();
 }
@@ -249,6 +258,50 @@ void Earth::doSomething()
 {
     return;
 } // dont do anything
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Boulder
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Boulder::Boulder(StudentWorld* world, int startX, int startY, bool isDisplayed): Actor(world, TID_BOULDER, startX, startY, down, 1.0, 1, isDisplayed), m_falling(false), m_tickWaiting(0) {}
+
+void Boulder::fall()
+{
+    getWorld()->checkBoulderHitsPeople(getX(), getY());
+    
+    if (!getWorld()->isThereEarthInDirection(getX(), getY(), down) && !getWorld()->isThereBoulderInDirection(getX(), getY(), down, this))
+    {
+        if (getY() > 0) moveTo(getX(), getY() - 1);
+        else setDead();
+    }
+    //there is earth or boulder blocking the rock
+    else setDead();
+}
+
+void Boulder::doSomething()
+{
+    if (!isAlive())
+        return;
+       
+    if(!m_falling) {
+        if (!getWorld()->isThereEarthInDirection(getX(), getY(), down))
+            m_falling = true;
+    }
+
+    
+    
+    else { // if m_falling = true
+        std::cout << "m_tickWaiting: " << m_tickWaiting << "\n";
+       if (m_tickWaiting >= 30) {
+           fall();
+
+           if (m_tickWaiting == 30)
+               getWorld()->playSound(SOUND_FALLING_ROCK);
+       }
+       ++m_tickWaiting;
+    }
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Protestors
@@ -412,8 +465,8 @@ void Protestor::setRandomDirection()
 
 bool Protestor::sittingAtIntersection()
 {
-    Direction direction1 = none;
-    Direction direction2 = none;
+    Direction d1 = none;
+    Direction d2 = none;
 
     switch(getDirection())
     {
@@ -421,12 +474,12 @@ bool Protestor::sittingAtIntersection()
         case down:
             if(!getWorld()->isThereBoulderInDirection(getX(), getY(), left, nullptr)
                && !getWorld()->isThereEarthInDirection(getX(), getY(), left)) {
-                direction1 = left;
+                d1 = left;
             }
             if(!getWorld()->isThereBoulderInDirection(getX(), getY(), left, nullptr)
                && !getWorld()->isThereEarthInDirection(getX(), getY(), left))
             {
-                direction2 = right;
+                d2 = right;
             }
             break;
             
@@ -434,11 +487,11 @@ bool Protestor::sittingAtIntersection()
         case left:
             if(!getWorld()->isThereBoulderInDirection(getX(), getY(), left, nullptr)
                && !getWorld()->isThereEarthInDirection(getX(), getY(), left)){
-                direction1 = up;
+                d1 = up;
             }
             if(!getWorld()->isThereBoulderInDirection(getX(), getY(), left, nullptr)
                && !getWorld()->isThereEarthInDirection(getX(), getY(), left)) {
-                direction2 = down;
+                d2 = down;
             }
             break;
             
@@ -449,16 +502,16 @@ bool Protestor::sittingAtIntersection()
 //    Pick a viable perpendicular direction. If both perpendicular directions are
 //    viable, then pick one of the two choices randomly.
     
-    if (direction1 != none || direction2 != none) {
-        if (direction1 != none && direction2 != none) {
+    if (d1 != none || d2 != none) {
+        if (d1 != none && d2 != none) {
             int directionChoice = rand() % 2;
             
-            if(directionChoice == 0) setDirection(direction1);
-            else setDirection(direction2);
+            if(directionChoice == 0) setDirection(d1);
+            else setDirection(d2);
         }
         
-        else if (direction1 != none) setDirection(direction1);
-        else setDirection(direction2);
+        else if (d1 != none) setDirection(d1);
+        else setDirection(d2);
         
         return true;
     }
@@ -587,7 +640,7 @@ void OilBarrel::doSomething()
 
 WaterPool::WaterPool(StudentWorld * world, int startX, int startY, int maxTickLife): Goodie(world, TID_WATER_POOL, startX, startY, 100, SOUND_GOT_GOODIE, maxTickLife, true)
 {}
-//------------------------------------------
+
 void WaterPool::doSomething()
 {
     if (!isAlive())
@@ -614,7 +667,7 @@ void WaterPool::doSomething()
 
 Sonar::Sonar(StudentWorld * world, int startX, int startY, int maxTickLife): Goodie(world, TID_SONAR, startX, startY, 75, SOUND_GOT_GOODIE, maxTickLife, true)
 {}
-//------------------------------------------
+
 void Sonar::doSomething()
 {
     if (!isAlive())
