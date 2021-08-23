@@ -142,31 +142,41 @@ private:
 class Protestor: public People
 {
 public:
-    Protestor(StudentWorld* world, int level);
+    Protestor(StudentWorld* world, int level, int imageID, int hitPoint = 5, int score = 100);
     virtual void doSomething() override;
     void getsAttacked(int damage) override;
     bool getBribed() override;
-    
-private:
+
+protected:
+    int m_level;
+    bool m_leaving;
+    bool m_stunned;
     int m_ticksToWaitBetweenMoves;
     
+private:
     int m_tickRest;
     int m_tickNonRest;
     int m_tickSinceLastTurn;
     int m_tickNonRestSinceShouted;
     int numSquaresToMoveInCurrentDirection;
     
-    int m_level;
-    bool m_leaving;
-    bool m_stunned;
+    
+    int m_score;
     
     void leaveOilField();
     void protestorMove();
     void setNumSquaresToMoveInCurrentDirection();
-    bool canSeeTunnelMan();
+    virtual bool canSeeTunnelMan();
     void setRandomDirection();
     bool sittingAtIntersection();
-    
+};
+
+class HardcoreProtestor: public Protestor
+{
+public:
+    HardcoreProtestor(StudentWorld* world, int level, int imageID = TID_HARD_CORE_PROTESTER, int hitPoint = 20, int score = 250);
+    bool getBribed() override;
+    bool canSeeTunnelMan() override;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

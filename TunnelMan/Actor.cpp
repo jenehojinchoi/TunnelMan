@@ -102,7 +102,6 @@ bool People::canBeAnnoyed() const
 
 void People::takeDamage(int damage)
 {
-    std::cout << "불리긴 함? " << "\n";
     m_hitPoint -= damage;
 }
 
@@ -244,8 +243,6 @@ void TunnelMan::doSomething()
 
 void TunnelMan::getsAttacked(int damage)
 {
-    std::cout << "///////////////////////////////////////////////////////" << "\n";
-    std::cout << "TunnelMan annoy called" << "\n";
     takeDamage(damage);
     if(getHitPoint() <= 0) setDead();
 }
@@ -294,7 +291,6 @@ void Boulder::doSomething()
     
     
     else { // if m_falling = true
-        std::cout << "m_tickWaiting: " << m_tickWaiting << "\n";
        if (m_tickWaiting >= 30) {
            fall();
 
@@ -341,7 +337,7 @@ void Squirt::doSomething()
 
 // TODO: divide into regular and hardcore
 
-Protestor::Protestor(StudentWorld* world, int level): People(world, TID_PROTESTER, MAX_COORDINATE, MAX_COORDINATE, left, 5), m_leaving(false), m_stunned(false), m_level(level), m_tickNonRest(0)
+Protestor::Protestor(StudentWorld* world, int level, int imageID, int hitPoint, int score): People(world, imageID, MAX_COORDINATE, MAX_COORDINATE, left, hitPoint), m_leaving(false), m_stunned(false), m_level(level), m_tickNonRest(0), m_score(score), m_tickRest(0)
 {
     m_ticksToWaitBetweenMoves = fmax(0, 3 - m_level / 4);
     setNumSquaresToMoveInCurrentDirection();
@@ -380,11 +376,19 @@ void Protestor::protestorMove()
 
 void Protestor::doSomething()
 {
+    
+    
     if (!isAlive())
         return;
     
     if (m_tickRest < m_ticksToWaitBetweenMoves) {
         m_tickRest++;
+        return;
+    }
+    
+    if (m_leaving) {
+        m_tickRest = 0;
+        leaveOilField();
         return;
     }
 
@@ -393,16 +397,10 @@ void Protestor::doSomething()
         m_stunned = false;
     }
     
-    if (m_leaving) {
-        m_tickRest = 0;
-        leaveOilField();
-        return;
-    }
-    
     else if (getWorld()->getDistanceFromTunnelMan(getX(), getY()) <= 4.0 && getWorld()->isProtestorFacingTunnelMan(getX(), getY(), getDirection()))
     {
         if (m_tickNonRest - m_tickNonRestSinceShouted >= 15) {
-            //TODO: shout at TunnelMan;
+            getWorld()->protestorShoutsAtTunnelMan();
             m_tickNonRestSinceShouted = m_tickNonRest;
         }
         m_tickRest = 0;
@@ -420,7 +418,6 @@ void Protestor::doSomething()
     
     --numSquaresToMoveInCurrentDirection;
 
-    
     if (numSquaresToMoveInCurrentDirection <= 0) {
         setRandomDirection();
 
@@ -450,7 +447,8 @@ void Protestor::getsAttacked(int damage)
         if (getHitPoint() <= 0) {
             getWorld()->playSound(SOUND_PROTESTER_GIVE_UP);
             
-            // TODO: Increase score by annoying Protestor
+            if (damage == 2) getWorld()->increaseScore(m_score);
+            // else protestor is bonked with a boulder
             
             m_leaving = true;
             m_tickRest = m_ticksToWaitBetweenMoves;
@@ -467,8 +465,7 @@ void Protestor::getsAttacked(int damage)
 bool Protestor::canSeeTunnelMan()
 {
     GraphObject::Direction direction;
-    if(getWorld()->isThereTunnelManInLine(getX(), getY(), direction))
-    {
+    if (getWorld()->isThereTunnelManInLine(getX(), getY(), direction)) {
         setDirection(direction);
         moveInDirection(direction);
         return true;
@@ -558,6 +555,32 @@ bool Protestor::getBribed()
         getWorld()->increaseScore(25);
         return true;
     }
+    return false;
+}
+
+//Protestor::Protestor(StudentWorld* world, int hitPoint, int level, int score): People(world, TID_PROTESTER, MAX_COORDINATE, MAX_COORDINATE, left, hitPoint), m_leaving(false), m_stunned(false), m_level(level), m_tickNonRest(0), m_score(score)
+
+HardcoreProtestor::HardcoreProtestor(StudentWorld * world, int level, int imageID, int hitPoint, int score): Protestor(world, level, TID_HARD_CORE_PROTESTER, 20, 250)
+{}
+
+bool HardcoreProtestor::getBribed()
+{
+    if (!m_leaving) {
+        m_stunned = true;
+        getWorld()->increaseScore(25);
+        getWorld()->playSound(SOUND_PROTESTER_FOUND_GOLD);
+        m_ticksToWaitBetweenMoves = fmax(50, 100 - (m_level * 10));
+        return true;
+    }
+    return false;
+}
+
+
+bool HardcoreProtestor::canSeeTunnelMan()
+{
+    int maxNumberOfMovesToDetectTunnelMan = 16 + (m_level * 2);
+    Direction d = none;
+    // TODO: ..?
     return false;
 }
 

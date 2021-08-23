@@ -454,11 +454,13 @@ void StudentWorld::dropGold(Gold* gold)
 
 void StudentWorld::boulderHitsPeople(const int x, const int y)
 {
-    std::cout << "checkBoulderHitsPeople??? " << "\n";
     for (vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++) {
         if ((*it)->canBeAnnoyed()) { // check if people (protestor)
             double d = getDistance(x, y, (*it)->getX(), (*it)->getY());
-            if (d <= 3.0) (*it)->getsAttacked(100);
+            if (d <= 3.0) {
+                (*it)->getsAttacked(100);
+                increaseScore(500); // increase score by 500 if a protestor is bonked with a boulder
+            }
         }
     }
     
@@ -484,6 +486,12 @@ bool StudentWorld::squirtHits(const int x, const int y)
         }
     }
     return false; // protestor not annoyed
+}
+
+void StudentWorld::protestorShoutsAtTunnelMan()
+{
+    m_tunnelMan->getsAttacked(2);
+    playSound(SOUND_PROTESTER_YELL);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -523,19 +531,25 @@ void StudentWorld::addToInventory(std::string object)
 
 void StudentWorld::initProtestors()
 {
-    int T = min(15, int(2 +getLevel() * 1.5));
-    int ticksToWaitBetweenMoves = max(25, 200-(int)getLevel());
+    int P = fmin(15, int(2 +getLevel() * 1.5)); // target number of protestors
+    // A new Protester (Regular or Hardcore) may only be added to the oil field after at least T ticks have passed since the last Protester of any type was added, where:
+    int T = fmax(25, 200-(int)getLevel());
     
-    if (this->m_numOfProtestors > T) return;
+    if (this->m_numOfProtestors > P) return;
     
-    if (this->m_tick % ticksToWaitBetweenMoves == 0 || this->m_tick == 0) {
-        // TODO: hardcore and regular not implemented yet
-        // probability, chance
-        // compare and make conditional loop
-        m_actors.push_back(new Protestor(this, this->getLevel()));
+    if (this->m_tick % T == 0 || this->m_tick == 0) {
+        int p = fmin(90, getLevel() * 10 + 30); // probability
+        int r = (rand() % 100) + 1; // random number
+
+        if (r <= p)
+            m_actors.push_back(new HardcoreProtestor(this, this->getLevel()));
+        else
+            m_actors.push_back(new Protestor(this, this->getLevel(), TID_PROTESTER));
+        
         ++this->m_numOfProtestors;
     }
 }
+
 
 
 void StudentWorld::TunnelManActorsDoSomething()

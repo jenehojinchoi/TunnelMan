@@ -57,6 +57,7 @@ public:
     void dropGold(Gold* gold);
     void boulderHitsPeople(const int x, const int y);
     bool squirtHits(const int x, const int y);
+    void protestorShoutsAtTunnelMan();
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // keeping track of games
