@@ -167,15 +167,15 @@ void StudentWorld::initBoulder()
 
 void StudentWorld::generateRandomCoordinates(int &x, int &y) const
 {
-    x = rand() % 60 + 1;
-    y = rand() % 56 + 1;
+    x = rand() % (MAX_COORDINATE + 1);
+    y = rand() % (MAX_COORDINATE - SPRITE_WIDTH + 1);
 }
 
 //y coordinate 20-56 inclusive
 void StudentWorld::generateRandomCoordinatesForBoulder(int &x, int &y) const
 {
-    x = rand() % 60 + 1;
-    y = rand() % 36 + 21;
+    x = rand() % (MAX_COORDINATE + 1);
+    y = rand() % (37) + 20;
 }
 void StudentWorld::generateBarrelsAndGold(const int numOfObjects, const char object)
 {
@@ -343,22 +343,142 @@ bool StudentWorld::isThereTunnelManInLine(int x, int y, GraphObject::Direction &
     return false;   //There was either Earth or a boulder blocking the path to TunnelMan
 }
 
-bool StudentWorld::isProtestorFacingTunnelMan(int x, int y, GraphObject::Direction direction)
+bool StudentWorld::canProtestorShout(int x, int y, GraphObject::Direction d) const
 {
     int amountToShift = 1;
-    if (direction == GraphObject::left || direction == GraphObject::down)
-        amountToShift = 4;
-    if (!shiftCoordinates(x, y, amountToShift, direction)) return false;
     
-    for (int i = x; i < x + SPRITE_WIDTH; ++i) {
-        for (int j = y; j < y + SPRITE_HEIGHT; ++j) {
-            if (i == m_tunnelMan->getX() && j == m_tunnelMan->getY()) return true;
+    if(d == GraphObject::left || d == GraphObject::down)
+        amountToShift = 4;
+    
+    if(!shiftCoordinates(x, y, amountToShift, d)) return false;
+
+    for(int i = x; i < x + SPRITE_WIDTH; ++i) {
+        for(int j = y; j < y + SPRITE_HEIGHT; ++j) {
+            if(i == m_tunnelMan->getX() && j == m_tunnelMan->getY())
+                return true;
         }
     }
     
     return false;
 }
 
+
+int StudentWorld::getPathToPoint(int x, int y, int targetX, int targetY, GraphObject::Direction &d)
+{
+    std::cout << "//////////////////////////////////////////////////////////" << "\n";
+    std::cout << "getMovesFromTunnelMan" << "\n";
+    std::cout << "targetX: " << targetX << "\n";
+    std::cout << "targetY: " << targetY << "\n";
+    
+    std::queue<Point> q;
+    Point nextPoint;
+    q.push(Point(x, y));
+    
+    bool visited[VIEW_WIDTH][VIEW_HEIGHT];
+
+    for (int i = 0; i < VIEW_WIDTH; ++i) {
+        for (int j = 0; j < VIEW_HEIGHT; ++j) {
+            visited[i][j] = false;
+        }
+    }
+    
+    // mark the entrance as visited
+    visited[x][y] = true;
+    GraphObject::Direction directions [] = {GraphObject::up, GraphObject::down, GraphObject::left, GraphObject::right};
+    
+    // up: 0
+    // down: 1
+    // left: 2
+    // right: 3
+    
+    for (int i = 0; i < 4; ++i) {
+        int a = x;
+        int b = y;
+
+        if (!isThereBoulderInDirection(x, y, directions[i], nullptr)
+            && !isThereEarthInDirection(x, y, directions[i])) {
+            if (shiftCoordinates(a, b, 1, directions[i])) {
+                visited[a][b] = true;
+                Point p(a, b, to_string(i));
+                q.push(p);
+            }
+        }
+    }
+    
+    while(!q.empty()) {
+        
+        nextPoint = q.front();
+        q.pop();
+        
+        // found target
+        if (nextPoint.x == targetX && nextPoint.y == targetY) {
+            q = queue<Point>();
+            break;
+        }
+        
+        //check all directions
+        for (int i = 0; i < 4; ++i) {
+            if (!isThereBoulderInDirection(x, y, directions[i], nullptr)
+                && !isThereEarthInDirection(x, y, directions[i])) {
+                int x = nextPoint.x;
+                int y = nextPoint.y;
+                
+                if (shiftCoordinates(x, y, 1, directions[i])) {
+                    if (!visited[x][y]) {
+                        visited[x][y] = true;
+                        Point n(x, y, nextPoint.string+to_string(i));
+                        q.push(n);
+                    }
+                }
+            }
+        }
+    }
+    
+    int index = stoi(nextPoint.string.substr(0,1));
+    d = directions[index];
+    return int(nextPoint.string.size());
+}
+
+int StudentWorld::getPathToTunnelMan(int x, int y, GraphObject::Direction &d)
+{
+    int targetX = m_tunnelMan->getX();
+    int targetY = m_tunnelMan->getY();
+    return getPathToPoint(x, y, targetX, targetY, d);
+}
+
+bool StudentWorld::canMoveInDirection(int x, int y, GraphObject::Direction direction)
+{
+    switch (direction) {
+            
+        case GraphObject::left:
+            return (x != 0 && !isThereEarthAtPoint(x-1, y) && isThereBoulderAtPoint(x, y));
+            
+        case GraphObject::right:
+            return (x != 60 && !isThereEarthAtPoint(x+1, y) && !isThereBoulderAtPoint(x+1, y));
+            
+        case GraphObject::up:
+            return (y != 60 &&!isThereEarthAtPoint(x, y+1) && !isThereBoulderAtPoint(x, y+1));
+            
+        case GraphObject::down:
+            return (y != 0 && !isThereEarthAtPoint(x, y-1) && !isThereBoulderAtPoint(x, y-1));
+        case GraphObject::none:
+            return false;
+            
+    }
+    return false;
+}
+
+bool StudentWorld::isThereBoulderAtPoint(int x, int y)
+{
+    vector<Actor*>::iterator it;
+    for (it = m_actors.begin(); it != m_actors.end(); it++) {
+        if ((*it)->getID() == TID_BOULDER) {
+            if (x == (*it)->getX() && y == (*it)->getY())
+                return true;
+        }
+    }
+    return false;
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // at point
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -399,7 +519,8 @@ void StudentWorld::digEarth(int x, int y)
     for (int i = x; i < x + 4; i++) {
         for (int j = y; j < y + 4; j++) {
             if (m_earth[i][j] != nullptr) {
-                delete m_earth[i][j];
+//                delete m_earth[i][j];
+                m_earth[i][j] -> setVisible(false);
                 m_earth[i][j] = nullptr;
             }
         }
@@ -458,7 +579,7 @@ void StudentWorld::boulderHitsPeople(const int x, const int y)
         if ((*it)->canBeAnnoyed()) { // check if people (protestor)
             double d = getDistance(x, y, (*it)->getX(), (*it)->getY());
             if (d <= 3.0) {
-                (*it)->getsAttacked(100);
+                (*it)->getAttacked(100);
                 increaseScore(500); // increase score by 500 if a protestor is bonked with a boulder
             }
         }
@@ -467,30 +588,30 @@ void StudentWorld::boulderHitsPeople(const int x, const int y)
     // check if tunnelman
     double d2 = getDistanceFromTunnelMan(x, y);
     if (d2 <= 6.0) { // double 3.0
-        m_tunnelMan->getsAttacked(100);
+        m_tunnelMan->getAttacked(100);
     }
 }
 
 bool StudentWorld::squirtHits(const int x, const int y)
 {
-    for (std::vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
-    {
+    bool result = false;
+    for (std::vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++) {
         // check protestors
         if ((*it)->canBeAnnoyed()) {
             double d = getDistance(x, y, (*it)->getX(), (*it)->getY());
             
             if (d <= 3.0) {
-                (*it)->getsAttacked(2); // if protestor was annoyed, return true
-                return true;
+                (*it)->getAttacked(2); // if protestor was annoyed, return true
+                result = true;
             }
         }
     }
-    return false; // protestor not annoyed
+    return result; // protestor not annoyed
 }
 
 void StudentWorld::protestorShoutsAtTunnelMan()
 {
-    m_tunnelMan->getsAttacked(2);
+    m_tunnelMan->getAttacked(2);
     playSound(SOUND_PROTESTER_YELL);
 }
 
@@ -535,17 +656,22 @@ void StudentWorld::initProtestors()
     // A new Protester (Regular or Hardcore) may only be added to the oil field after at least T ticks have passed since the last Protester of any type was added, where:
     int T = fmax(25, 200-(int)getLevel());
     
-    if (this->m_numOfProtestors > P) return;
-    
-    if (this->m_tick % T == 0 || this->m_tick == 0) {
-        int p = fmin(90, getLevel() * 10 + 30); // probability
-        int r = (rand() % 100) + 1; // random number
-
-        if (r <= p)
-            m_actors.push_back(new HardcoreProtestor(this, this->getLevel()));
-        else
-            m_actors.push_back(new Protestor(this, this->getLevel(), TID_PROTESTER));
-        
+//    if (this->m_numOfProtestors > P) return;
+//
+//    if (this->m_tick % T == 0 || this->m_tick == 0) {
+//        int p = fmin(90, getLevel() * 10 + 30); // probability
+//        int r = (rand() % 100) + 1; // random number
+//
+//        if (r <= p)
+//            m_actors.push_back(new HardcoreProtestor(this, this->getLevel()));
+//        else
+//            m_actors.push_back(new Protestor(this, this->getLevel(), TID_PROTESTER));
+//
+//        ++this->m_numOfProtestors;
+//    }
+    if (this->m_tick == 0) {
+        //m_actors.push_back(new HardcoreProtestor(this, this->getLevel()));
+        m_actors.push_back(new Protestor(this, this->getLevel(), TID_PROTESTER));
         ++this->m_numOfProtestors;
     }
 }
@@ -554,9 +680,11 @@ void StudentWorld::initProtestors()
 
 void StudentWorld::TunnelManActorsDoSomething()
 {
+    std::cout << "m_tick: " << m_tick << "\n";
     m_tunnelMan->doSomething();
-    for (std::vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); ++it)
+    for (std::vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); ++it) {
         (*it)->doSomething();
+    }
 }
 
 

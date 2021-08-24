@@ -23,7 +23,7 @@ public:
     virtual void doSomething() = 0;
     bool isAlive();
     void setDead();
-    virtual void getsAttacked(int damage);
+    virtual void getAttacked(int damage);
     virtual bool canBeAnnoyed() const;
     virtual bool getBribed();
     
@@ -83,7 +83,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     void doSomething() override;
-    void getsAttacked(int damage) override;
+    void getAttacked(int damage) override;
     void shoot();
     
 private:
@@ -144,7 +144,7 @@ class Protestor: public People
 public:
     Protestor(StudentWorld* world, int level, int imageID, int hitPoint = 5, int score = 100);
     virtual void doSomething() override;
-    void getsAttacked(int damage) override;
+    void getAttacked(int damage) override;
     bool getBribed() override;
 
 protected:
@@ -156,10 +156,9 @@ protected:
 private:
     int m_tickRest;
     int m_tickNonRest;
-    int m_tickSinceLastTurn;
+    int m_tickLastTurn;
     int m_tickNonRestSinceShouted;
     int numSquaresToMoveInCurrentDirection;
-    
     
     int m_score;
     

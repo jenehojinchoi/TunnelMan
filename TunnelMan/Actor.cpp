@@ -32,7 +32,7 @@ StudentWorld* Actor::getWorld()
 }
 
 
-void Actor::getsAttacked(int damage) {};
+void Actor::getAttacked(int damage) {};
 
 bool Actor::getBribed()
 {
@@ -241,7 +241,7 @@ void TunnelMan::doSomething()
     }
 }
 
-void TunnelMan::getsAttacked(int damage)
+void TunnelMan::getAttacked(int damage)
 {
     takeDamage(damage);
     if(getHitPoint() <= 0) setDead();
@@ -339,9 +339,10 @@ void Squirt::doSomething()
 
 Protestor::Protestor(StudentWorld* world, int level, int imageID, int hitPoint, int score): People(world, imageID, MAX_COORDINATE, MAX_COORDINATE, left, hitPoint), m_leaving(false), m_stunned(false), m_level(level), m_tickNonRest(0), m_score(score), m_tickRest(0)
 {
-    m_ticksToWaitBetweenMoves = fmax(0, 3 - m_level / 4);
+    m_ticksToWaitBetweenMoves = 2*fmax(0, 3 - (m_level / 4));
+    std::cout << "m_ticksToWaitBetweenMoves: " << m_ticksToWaitBetweenMoves << "\n";
     setNumSquaresToMoveInCurrentDirection();
-    m_tickSinceLastTurn = -200;
+    m_tickLastTurn = -200;
     m_tickNonRestSinceShouted = -15;
 };
 
@@ -353,14 +354,19 @@ void Protestor::setNumSquaresToMoveInCurrentDirection()
 
 void Protestor::leaveOilField()
 {
+    // 1. x = 60, y= 60
     if (getX() == MAX_COORDINATE && getY() == MAX_COORDINATE) {
         setDead();
         getWorld()->decreaseNumOfProtestors();
         return;
     }
     
+    // 2. move closer to exit
     else {
-        // TODO: direct Protestor towards exit
+        GraphObject::Direction d;
+        getWorld()->getPathToPoint(getX(), getY(), MAX_COORDINATE, MAX_COORDINATE, d);
+        setDirection(d);
+        moveInDirection(d);
     }
     
 }
@@ -376,30 +382,44 @@ void Protestor::protestorMove()
 
 void Protestor::doSomething()
 {
-    
-    
-    if (!isAlive())
+//    std::cout << "m_tickRest: " << m_tickRest << "\n";
+//    std::cout << "m_tickNonRest: " << m_tickNonRest << "\n";
+//    std::cout << "x: " << getX() << "\n";
+//    std::cout << "y: " << getY() << "\n";
+//
+    // 1.
+    if (!isAlive()) {
+        std::cout << "step 1" << "\n";
         return;
+    }
     
+    // 2.
     if (m_tickRest < m_ticksToWaitBetweenMoves) {
+        std::cout << "step 2" << "\n";
         m_tickRest++;
         return;
     }
     
+    // 3.
     if (m_leaving) {
+        std::cout << "step 3" << "\n";
         m_tickRest = 0;
         leaveOilField();
         return;
     }
 
     if (m_stunned) {
+        std::cout << "stunned" << "\n";
         m_ticksToWaitBetweenMoves = fmax(0, 3 - m_level / 4);
         m_stunned = false;
     }
+
     
-    else if (getWorld()->getDistanceFromTunnelMan(getX(), getY()) <= 4.0 && getWorld()->isProtestorFacingTunnelMan(getX(), getY(), getDirection()))
-    {
+    // 4.
+    else if (getWorld()->getDistanceFromTunnelMan(getX(), getY()) <= 4.0 && getWorld()->canProtestorShout(getX(), getY(), getDirection())) {
+        std::cout << "step 4" << "\n";
         if (m_tickNonRest - m_tickNonRestSinceShouted >= 15) {
+            
             getWorld()->protestorShoutsAtTunnelMan();
             m_tickNonRestSinceShouted = m_tickNonRest;
         }
@@ -408,17 +428,21 @@ void Protestor::doSomething()
         return;
     }
     
-    else if (getWorld()->getDistanceFromTunnelMan(getX(), getY()) > 4.0 && canSeeTunnelMan())
-    {
+    // 5. regular protestor and hardcore protestor behave differently
+    // canSeeTunnelMan is different
+    else if (getWorld()->getDistanceFromTunnelMan(getX(), getY()) > 4.0 && canSeeTunnelMan()) {
+        std::cout << "step 5" << "\n";
         m_tickRest = 0;
         ++m_tickNonRest;
         numSquaresToMoveInCurrentDirection = 0;
         return;
     }
     
+    // 6.
     --numSquaresToMoveInCurrentDirection;
 
     if (numSquaresToMoveInCurrentDirection <= 0) {
+        std::cout << "step 6" << "\n";
         setRandomDirection();
 
         while (getWorld()->isThereEarthInDirection(getX(), getY(), getDirection()) || getWorld()->isThereBoulderInDirection(getX(), getY(), getDirection(), nullptr)) {
@@ -428,9 +452,12 @@ void Protestor::doSomething()
         setNumSquaresToMoveInCurrentDirection();
     }
     
+    // 7.
     else {
-        if (m_tickNonRest - m_tickSinceLastTurn >= 200 && sittingAtIntersection()) {
-            m_tickSinceLastTurn = m_tickNonRest;
+        std::cout << "step 7" << "\n";
+        if (m_tickNonRest - m_tickLastTurn >= 200 && sittingAtIntersection()) {
+            std::cout << "step 7-1" << "\n";
+            m_tickLastTurn = m_tickNonRest;
             setNumSquaresToMoveInCurrentDirection();
         }
     }
@@ -439,7 +466,7 @@ void Protestor::doSomething()
     m_tickNonRest++;
 }
 
-void Protestor::getsAttacked(int damage)
+void Protestor::getAttacked(int damage)
 {
     if (!m_leaving) {
         takeDamage(damage);
@@ -457,7 +484,7 @@ void Protestor::getsAttacked(int damage)
         else {
             getWorld()->playSound(SOUND_PROTESTER_ANNOYED);
             m_stunned = true;
-            m_ticksToWaitBetweenMoves = fmax(50, 100 - m_level * 10);
+            m_ticksToWaitBetweenMoves = 2*fmax(50, 100 - m_level * 10);
         }
     }
 }
@@ -494,57 +521,12 @@ void Protestor::setRandomDirection()
 
 bool Protestor::sittingAtIntersection()
 {
-    Direction d1 = none;
-    Direction d2 = none;
-
-    switch(getDirection())
-    {
-        case up:
-        case down:
-            if(!getWorld()->isThereBoulderInDirection(getX(), getY(), left, nullptr)
-               && !getWorld()->isThereEarthInDirection(getX(), getY(), left)) {
-                d1 = left;
-            }
-            if(!getWorld()->isThereBoulderInDirection(getX(), getY(), left, nullptr)
-               && !getWorld()->isThereEarthInDirection(getX(), getY(), left))
-            {
-                d2 = right;
-            }
-            break;
-            
-        case right:
-        case left:
-            if(!getWorld()->isThereBoulderInDirection(getX(), getY(), left, nullptr)
-               && !getWorld()->isThereEarthInDirection(getX(), getY(), left)){
-                d1 = up;
-            }
-            if(!getWorld()->isThereBoulderInDirection(getX(), getY(), left, nullptr)
-               && !getWorld()->isThereEarthInDirection(getX(), getY(), left)) {
-                d2 = down;
-            }
-            break;
-            
-        case none:
-            return false;
+    if (getDirection() == up || getDirection() == down) {
+        return (getWorld()->canMoveInDirection(getX(),getY(), left) || getWorld()->canMoveInDirection(getX(),getY(), right));
     }
-    
-//    Pick a viable perpendicular direction. If both perpendicular directions are
-//    viable, then pick one of the two choices randomly.
-    
-    if (d1 != none || d2 != none) {
-        if (d1 != none && d2 != none) {
-            int directionChoice = rand() % 2;
-            
-            if(directionChoice == 0) setDirection(d1);
-            else setDirection(d2);
-        }
-        
-        else if (d1 != none) setDirection(d1);
-        else setDirection(d2);
-        
-        return true;
+    else {
+        return (getWorld()->canMoveInDirection(getX(),getY(), up) || getWorld()->canMoveInDirection(getX(),getY(), down));
     }
-    return false;
 }
 
 bool Protestor::getBribed()
@@ -557,8 +539,6 @@ bool Protestor::getBribed()
     }
     return false;
 }
-
-//Protestor::Protestor(StudentWorld* world, int hitPoint, int level, int score): People(world, TID_PROTESTER, MAX_COORDINATE, MAX_COORDINATE, left, hitPoint), m_leaving(false), m_stunned(false), m_level(level), m_tickNonRest(0), m_score(score)
 
 HardcoreProtestor::HardcoreProtestor(StudentWorld * world, int level, int imageID, int hitPoint, int score): Protestor(world, level, TID_HARD_CORE_PROTESTER, 20, 250)
 {}
@@ -578,10 +558,28 @@ bool HardcoreProtestor::getBribed()
 
 bool HardcoreProtestor::canSeeTunnelMan()
 {
-    int maxNumberOfMovesToDetectTunnelMan = 16 + (m_level * 2);
-    Direction d = none;
-    // TODO: ..?
-    return false;
+    // 5. for hardCoreProtestor
+    int M = 16 + m_level * 2;
+    Direction d;
+
+    int n = getWorld()->getPathToTunnelMan(getX(), getY(), d);
+    
+    std::cout << "========================================" << "\n";
+    std::cout << "nMoves: " << n << "\n";
+    std::cout << "direction: " << d << "\n";
+    
+    if (n <= M) {
+        setDirection(d);
+        moveInDirection(d);
+        return true;
+    }
+    
+    else if(getWorld()->isThereTunnelManInLine(getX(), getY(), d)) {
+        setDirection(d);
+        moveInDirection(d);
+        return true;
+    }
+    return false; // temporary
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
