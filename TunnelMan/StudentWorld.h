@@ -10,6 +10,7 @@
 class Actor;
 class People;
 class TunnelMan;
+class Protestor;
 class Earth;
 class Gold;
 class OilBarrel;
@@ -44,9 +45,6 @@ public:
     int getPathToTunnelMan(int x, int y, GraphObject::Direction &d);
     bool canMoveInDirection(int x, int y, GraphObject::Direction direction);
     
-    // added
-    //int pathFinder(int x, int y, int prevx, int prevy, int targetx, targety, int currentstep);
-    
     // at point
     bool isThereObjectAtPoint(const int x, const int y);
     bool isThereEarthAtPoint(int x, int y);
@@ -72,18 +70,16 @@ public:
     void decreaseNumOfProtestors();
     void decreaseNumOfBarrels();
     void addToInventory(std::string object);
-    
-    // added temporarily
-    int m_tick;
+    void moveToExit(Protestor *pr, int a, int b);
     
 private:
-    
-    
+    int m_tick;
+    // added for now
+    int visited[64][64];
     int m_numOfProtestors;
     int m_numOfBarrelsLeft;
     
     std::vector<Actor*> m_actors;
-    //std::vector<Gold*> m_droppedGold;
     Earth* m_earth[64][64];
     TunnelMan* m_tunnelMan;
 
@@ -110,11 +106,11 @@ private:
 struct Point {
     int x, y;
     std::string string;
-//    int numOfMoves;
-//    GraphObject::Direction initialDirection;
+    //int numOfMoves;
+    //GraphObject::Direction initialDirection;
     
-    Point(int a = 0, int b = 0, std::string s = "") : x(a), y(b), string(s)
-    {};
+    Point(int a = 0, int b = 0, std::string s = "") : x(a), y(b), string(s){};
+    //Point(int a = 0, int b = 0, int n = 0, GraphObject::Direction d = GraphObject::none) : x(a), y(b), numOfMoves(n), initialDirection(d) {};
 };
 
 

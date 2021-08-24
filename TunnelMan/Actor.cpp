@@ -44,8 +44,7 @@ bool Actor::canBeAnnoyed() const
     return false;
 }
 
-// moveTo(), direction comes from GraphObject
-// boulder not working properly yet so I took it out for now
+// moveInDirection returns true when it is moved correctly
 bool Actor::moveInDirection(Direction direction)
 {
     switch(direction) {
@@ -287,8 +286,6 @@ void Boulder::doSomething()
         if (!getWorld()->isThereEarthInDirection(getX(), getY(), down))
             m_falling = true;
     }
-
-    
     
     else { // if m_falling = true
        if (m_tickWaiting >= 30) {
@@ -323,8 +320,10 @@ void Squirt::doSomething()
         return;
     }
     
-    if (!getWorld()->isThereEarthInDirection(getX(), getY(), getDirection()) && !moveInDirection(getDirection()))
-        setDead();
+    if (!getWorld()->isThereEarthInDirection(getX(), getY(), getDirection())) {
+        if (!moveInDirection(getDirection()))
+            setDead();
+    }
     //hits boulder or Earth
     else setDead();
     
@@ -334,8 +333,6 @@ void Squirt::doSomething()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Protestors
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// TODO: divide into regular and hardcore
 
 Protestor::Protestor(StudentWorld* world, int level, int imageID, int hitPoint, int score): People(world, imageID, MAX_COORDINATE, MAX_COORDINATE, left, hitPoint), m_leaving(false), m_stunned(false), m_level(level), m_tickNonRest(0), m_score(score), m_tickRest(0)
 {
@@ -354,21 +351,23 @@ void Protestor::setNumSquaresToMoveInCurrentDirection()
 
 void Protestor::leaveOilField()
 {
+    //std::cout << "LEAVING OIL FIELD" << "\n";
     // 1. x = 60, y= 60
     if (getX() == MAX_COORDINATE && getY() == MAX_COORDINATE) {
         setDead();
         getWorld()->decreaseNumOfProtestors();
         return;
     }
-    
-    // 2. move closer to exit
+//
+//    // 2. move closer to exit
     else {
         GraphObject::Direction d;
         getWorld()->getPathToPoint(getX(), getY(), MAX_COORDINATE, MAX_COORDINATE, d);
         setDirection(d);
         moveInDirection(d);
+        //getWorld()->moveToExit(this, getX(), getY());
+        //return;
     }
-    
 }
 
 void Protestor::protestorMove()
@@ -382,34 +381,30 @@ void Protestor::protestorMove()
 
 void Protestor::doSomething()
 {
-//    std::cout << "m_tickRest: " << m_tickRest << "\n";
-//    std::cout << "m_tickNonRest: " << m_tickNonRest << "\n";
-//    std::cout << "x: " << getX() << "\n";
-//    std::cout << "y: " << getY() << "\n";
-//
     // 1.
     if (!isAlive()) {
-        std::cout << "step 1" << "\n";
+        //std::cout << "step 1" << "\n";
         return;
     }
     
     // 2.
-    if (m_tickRest < m_ticksToWaitBetweenMoves) {
-        std::cout << "step 2" << "\n";
+    if (!m_leaving && m_tickRest < m_ticksToWaitBetweenMoves) {
+        //std::cout << "step 2" << "\n";
         m_tickRest++;
         return;
     }
     
     // 3.
     if (m_leaving) {
-        std::cout << "step 3" << "\n";
+        //std::cout << "step 3" << "\n";
+        //std::cout << "LEAVE!" << "\n";
         m_tickRest = 0;
         leaveOilField();
         return;
     }
 
     if (m_stunned) {
-        std::cout << "stunned" << "\n";
+        //std::cout << "stunned" << "\n";
         m_ticksToWaitBetweenMoves = fmax(0, 3 - m_level / 4);
         m_stunned = false;
     }
@@ -417,7 +412,7 @@ void Protestor::doSomething()
     
     // 4.
     else if (getWorld()->getDistanceFromTunnelMan(getX(), getY()) <= 4.0 && getWorld()->canProtestorShout(getX(), getY(), getDirection())) {
-        std::cout << "step 4" << "\n";
+        //std::cout << "step 4" << "\n";
         if (m_tickNonRest - m_tickNonRestSinceShouted >= 15) {
             
             getWorld()->protestorShoutsAtTunnelMan();
@@ -431,7 +426,7 @@ void Protestor::doSomething()
     // 5. regular protestor and hardcore protestor behave differently
     // canSeeTunnelMan is different
     else if (getWorld()->getDistanceFromTunnelMan(getX(), getY()) > 4.0 && canSeeTunnelMan()) {
-        std::cout << "step 5" << "\n";
+        //std::cout << "step 5" << "\n";
         m_tickRest = 0;
         ++m_tickNonRest;
         numSquaresToMoveInCurrentDirection = 0;
@@ -442,7 +437,7 @@ void Protestor::doSomething()
     --numSquaresToMoveInCurrentDirection;
 
     if (numSquaresToMoveInCurrentDirection <= 0) {
-        std::cout << "step 6" << "\n";
+        //std::cout << "step 6" << "\n";
         setRandomDirection();
 
         while (getWorld()->isThereEarthInDirection(getX(), getY(), getDirection()) || getWorld()->isThereBoulderInDirection(getX(), getY(), getDirection(), nullptr)) {
@@ -454,9 +449,9 @@ void Protestor::doSomething()
     
     // 7.
     else {
-        std::cout << "step 7" << "\n";
+        //std::cout << "step 7" << "\n";
         if (m_tickNonRest - m_tickLastTurn >= 200 && sittingAtIntersection()) {
-            std::cout << "step 7-1" << "\n";
+            //std::cout << "step 7-1" << "\n";
             m_tickLastTurn = m_tickNonRest;
             setNumSquaresToMoveInCurrentDirection();
         }
@@ -519,6 +514,7 @@ void Protestor::setRandomDirection()
     }
 }
 
+
 bool Protestor::sittingAtIntersection()
 {
     if (getDirection() == up || getDirection() == down) {
@@ -559,14 +555,10 @@ bool HardcoreProtestor::getBribed()
 bool HardcoreProtestor::canSeeTunnelMan()
 {
     // 5. for hardCoreProtestor
-    int M = 16 + m_level * 2;
+    int M = 16 + m_level * 2; 
     Direction d;
 
     int n = getWorld()->getPathToTunnelMan(getX(), getY(), d);
-    
-    std::cout << "========================================" << "\n";
-    std::cout << "nMoves: " << n << "\n";
-    std::cout << "direction: " << d << "\n";
     
     if (n <= M) {
         setDirection(d);
@@ -628,7 +620,6 @@ void Gold::doSomething()
         return;
 
     if (m_isPickupAbleByTunnelMan) {
-        
         double d = getWorld()->getDistanceFromTunnelMan(getX(), getY());
         
         if (!isVisible() && d <= 4.0) {
@@ -636,27 +627,34 @@ void Gold::doSomething()
             return;
         }
         
-        else if(isPickupAbleByTunnelMan(d)) {
+        else if (isPickupAbleByTunnelMan(d)) {
             getWorld()->addToInventory("gold");
         }
     }
     
-    else isPickupAbleByProtestor();
+    else {
+        isPickupAbleByProtestor();
+    }
+    increaseTickPassed();
+}
+
+void Gold::updateTickDropped()
+{
+    m_tickDropped = getTickPassed();
 }
 
 void Gold::isPickupAbleByProtestor()
 {
-    if (getTickPassed() == getMaxTickLife()) {
+    if (getTickPassed() == m_tickDropped + 100) {
         setDead();
     }
+    
     else {
         if (getWorld()->checkForBribes(getX(), getY())) {
             setDead();
             getWorld()->playSound(SOUND_PROTESTER_FOUND_GOLD);
             getWorld()->increaseScore(25);
         }
-        
-        increaseTickPassed();
     }
 }
 
@@ -671,19 +669,20 @@ void OilBarrel::doSomething()
     if (!isAlive())
         return;
 
-// Otherwise, if the Barrel is not currently visible and the TunnelMan is within a radius of 4.0 of it (<= 4.00 units away)
-
     double d = getWorld()->getDistanceFromTunnelMan(getX(), getY());
     
+    // Barrel is not currently visible and the TunnelMan is within a radius of 4.0 of it (<= 4.00 units away
     if (!isVisible() &&  d <= 4.0) {
         setVisible(true);
         return;
 
-//Otherwise, if the Barrel is within a radius of 3.0 (<= 3.00 units away) from the
-// TunnelMan, then the Barrel will activate,
+    //Otherwise, if the Barrel is within a radius of 3.0 (<= 3.00 units away) from the
+    // TunnelMan, then the Barrel will activate,
     } else if (isPickupAbleByTunnelMan(d)){
         getWorld()->decreaseNumOfBarrels();
     }
+    
+    increaseTickPassed();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -691,25 +690,34 @@ void OilBarrel::doSomething()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-WaterPool::WaterPool(StudentWorld * world, int startX, int startY, int maxTickLife): Goodie(world, TID_WATER_POOL, startX, startY, 100, SOUND_GOT_GOODIE, maxTickLife, true)
+WaterPool::WaterPool(StudentWorld * world, int startX, int startY): Goodie(world, TID_WATER_POOL, startX, startY, 100, SOUND_GOT_GOODIE, 0, true)
 {}
+
+void WaterPool::updateTickMade()
+{
+    m_tickMade = getTickPassed();
+}
 
 void WaterPool::doSomething()
 {
     if (!isAlive())
         return;
 
-    if (getTickPassed() == getMaxTickLife())
+    int tickLife = fmax(100, 300 - 10 * getWorld()->getLevel());
+    // after maxlife, object is setDead.
+    if (getTickPassed() == m_tickMade + tickLife) {
         setDead();
+    }
     
     else {
         double d = getWorld()->getDistanceFromTunnelMan(getX(), getY());
 
         if (isPickupAbleByTunnelMan(d))
+            // if picked up, add to tunnelman's inventory
             getWorld()->addToInventory("squirt");
-
-        increaseTickPassed();
     }
+    
+    increaseTickPassed();
 }
 
 
@@ -718,23 +726,30 @@ void WaterPool::doSomething()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-Sonar::Sonar(StudentWorld * world, int startX, int startY, int maxTickLife): Goodie(world, TID_SONAR, startX, startY, 75, SOUND_GOT_GOODIE, maxTickLife, true)
+Sonar::Sonar(StudentWorld * world, int startX, int startY): Goodie(world, TID_SONAR, startX, startY, 75, SOUND_GOT_GOODIE, 0, true)
 {}
+
+void Sonar::updateTickMade()
+{
+    m_tickMade = getTickPassed();
+}
 
 void Sonar::doSomething()
 {
     if (!isAlive())
         return;
 
-    if (getTickPassed() == getMaxTickLife())
+    int tickLife = fmax(100, 300 - 10 * getWorld()->getLevel());
+    // after maxlife, object is setDead.
+    if (getTickPassed() == m_tickMade + tickLife)
         setDead();
     
     else {
         double d = getWorld()->getDistanceFromTunnelMan(getX(), getY());
 
         if (isPickupAbleByTunnelMan(d))
+            // if picked up, add to tunnelman's inventory
             getWorld()->addToInventory("sonar");
-
-        increaseTickPassed();
     }
+    increaseTickPassed();
 }

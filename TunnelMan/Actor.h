@@ -191,6 +191,7 @@ public:
     void increaseTickPassed();
     int getTickPassed();
     int getMaxTickLife();
+    virtual void updateTickMade() {return;};
     
 private:
     int m_sound;
@@ -209,9 +210,11 @@ public:
     Gold(StudentWorld* world, int startX, int startY, bool isPickupAble, bool isDisplayed);
     void doSomething() override;
     void isPickupAbleByProtestor();
+    void updateTickDropped();
 
 private:
     bool m_isPickupAbleByTunnelMan;
+    int m_tickDropped;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -232,8 +235,11 @@ public:
 class Sonar: public Goodie
 {
 public:
-    Sonar(StudentWorld* world, int startX, int startY, int maxTickLife);
+    Sonar(StudentWorld* world, int startX, int startY);
     void doSomething() override;
+    void updateTickMade() override;
+private:
+    int m_tickMade;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -242,8 +248,11 @@ public:
 
 class WaterPool: public Goodie {
 public:
-    WaterPool(StudentWorld* world, int startX, int startY, int maxTickLife);
+    WaterPool(StudentWorld* world, int startX, int startY);
     void doSomething() override;
+    void updateTickMade() override;
+private:
+    int m_tickMade;
 };
 
 

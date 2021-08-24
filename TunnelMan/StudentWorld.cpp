@@ -123,12 +123,13 @@ void StudentWorld::initSonarAndWaterPool()
     
     if (rand() % goodieChance == 0) {
         
-        int tickLife = fmax(100, 300 - 10 * getLevel());
         int sonarChance = rand() % 5;
         
         // Sonar
         if (sonarChance == 0) {
-            m_actors.push_back(new Sonar(this, 0, MAX_COORDINATE, tickLife));
+            Sonar* sonar = new Sonar(this, 0, MAX_COORDINATE);
+            sonar->updateTickMade();
+            m_actors.push_back(sonar);
         }
         
         // Water pool
@@ -140,18 +141,21 @@ void StudentWorld::initSonarAndWaterPool()
             while (isThereEarthAtPoint(x, y) || isThereObjectAtPoint(x, y)) {
                 generateRandomCoordinates(x, y);
             }
-            m_actors.push_back(new WaterPool(this, x, y, tickLife));
+            WaterPool* water = new WaterPool(this, x, y);
+            water->updateTickMade();
+            m_actors.push_back(water);
+            std::cout << "짜자 " << "\n";
         }
     }
 }
 
 void StudentWorld::initBoulder()
 {
-    int numOfBoulders = fmin((getLevel() / 2 + 2), 9);
+    int numOfBoulders = fmin(getLevel() / 2 + 2, 9);
     int x, y;
     generateRandomCoordinatesForBoulder(x, y);
     
-    for (int i = 0; i < numOfBoulders; i++) {
+    for (int i = 0; i < numOfBoulders; ++i) {
         generateRandomCoordinatesForBoulder(x, y);
         
         while (isThereObjectAtPoint(x, y) || ((x > (30 - SPRITE_WIDTH)) && x < 34 && y > 0)) {
@@ -160,7 +164,6 @@ void StudentWorld::initBoulder()
         
         digEarth(x, y); // delete earth around boulders
         m_actors.push_back(new Boulder(this, x, y, true));
-        break;
     }
     
 }
@@ -365,14 +368,13 @@ bool StudentWorld::canProtestorShout(int x, int y, GraphObject::Direction d) con
 
 int StudentWorld::getPathToPoint(int x, int y, int targetX, int targetY, GraphObject::Direction &d)
 {
-    std::cout << "//////////////////////////////////////////////////////////" << "\n";
-    std::cout << "getMovesFromTunnelMan" << "\n";
-    std::cout << "targetX: " << targetX << "\n";
-    std::cout << "targetY: " << targetY << "\n";
-    
+//    std::cout << "//////////////////////////////////////////////////////////" << "\n";
+//    std::cout << "getPathToPoint" << "\n";
+//    std::cout << "x: " << x << "\n";
+//    std::cout << "y: " << y << "\n";
+//
     std::queue<Point> q;
     Point nextPoint;
-    q.push(Point(x, y));
     
     bool visited[VIEW_WIDTH][VIEW_HEIGHT];
 
@@ -383,7 +385,7 @@ int StudentWorld::getPathToPoint(int x, int y, int targetX, int targetY, GraphOb
     }
     
     // mark the entrance as visited
-    visited[x][y] = true;
+   // visited[x][y] = true;
     GraphObject::Direction directions [] = {GraphObject::up, GraphObject::down, GraphObject::left, GraphObject::right};
     
     // up: 0
@@ -410,14 +412,14 @@ int StudentWorld::getPathToPoint(int x, int y, int targetX, int targetY, GraphOb
         nextPoint = q.front();
         q.pop();
         
-        // found target
-        if (nextPoint.x == targetX && nextPoint.y == targetY) {
-            q = queue<Point>();
-            break;
-        }
-        
         //check all directions
         for (int i = 0; i < 4; ++i) {
+            // found target
+            if (nextPoint.x == targetX && nextPoint.y == targetY) {
+                q = queue<Point>();
+                break;
+            }
+            
             if (!isThereBoulderInDirection(x, y, directions[i], nullptr)
                 && !isThereEarthInDirection(x, y, directions[i])) {
                 int x = nextPoint.x;
@@ -435,7 +437,9 @@ int StudentWorld::getPathToPoint(int x, int y, int targetX, int targetY, GraphOb
     }
     
     int index = stoi(nextPoint.string.substr(0,1));
+    //std::cout << "index: " << index << "\n";
     d = directions[index];
+    //initialStep = nextPoint.initialStepToReachPoint;
     return int(nextPoint.string.size());
 }
 
@@ -461,6 +465,7 @@ bool StudentWorld::canMoveInDirection(int x, int y, GraphObject::Direction direc
             
         case GraphObject::down:
             return (y != 0 && !isThereEarthAtPoint(x, y-1) && !isThereBoulderAtPoint(x, y-1));
+            
         case GraphObject::none:
             return false;
             
@@ -529,6 +534,7 @@ void StudentWorld::digEarth(int x, int y)
 
 void StudentWorld::shootWithSquirt()
 {
+    //std::cout << "Shoot!!!" << "\n";
     m_actors.push_back(new Squirt(this, m_tunnelMan->getX(), m_tunnelMan->getY(), m_tunnelMan->getDirection()));
     playSound(SOUND_PLAYER_SQUIRT);
 }
@@ -570,6 +576,8 @@ bool StudentWorld::checkForBribes(const int x, const int y)
 
 void StudentWorld::dropGold(Gold* gold)
 {
+    std::cout << "DROP GOLD!!!!!" << "\n";
+    gold->updateTickDropped();
     m_actors.push_back(gold);
 }
 
@@ -656,27 +664,20 @@ void StudentWorld::initProtestors()
     // A new Protester (Regular or Hardcore) may only be added to the oil field after at least T ticks have passed since the last Protester of any type was added, where:
     int T = fmax(25, 200-(int)getLevel());
     
-//    if (this->m_numOfProtestors > P) return;
-//
-//    if (this->m_tick % T == 0 || this->m_tick == 0) {
-//        int p = fmin(90, getLevel() * 10 + 30); // probability
-//        int r = (rand() % 100) + 1; // random number
-//
-//        if (r <= p)
-//            m_actors.push_back(new HardcoreProtestor(this, this->getLevel()));
-//        else
-//            m_actors.push_back(new Protestor(this, this->getLevel(), TID_PROTESTER));
-//
-//        ++this->m_numOfProtestors;
-//    }
-    if (this->m_tick == 0) {
-        //m_actors.push_back(new HardcoreProtestor(this, this->getLevel()));
-        m_actors.push_back(new Protestor(this, this->getLevel(), TID_PROTESTER));
+    if (this->m_numOfProtestors > P) return;
+
+    if (this->m_tick % T == 0 || this->m_tick == 0) {
+        int p = fmin(90, getLevel() * 10 + 30); // probability
+        int r = (rand() % 100) + 1; // random number
+
+        if (r <= p)
+            m_actors.push_back(new HardcoreProtestor(this, this->getLevel()));
+        else
+            m_actors.push_back(new Protestor(this, this->getLevel(), TID_PROTESTER));
+
         ++this->m_numOfProtestors;
     }
 }
-
-
 
 void StudentWorld::TunnelManActorsDoSomething()
 {
@@ -702,4 +703,57 @@ void StudentWorld::clearDeadActors()
         else
             ++it;
     }
+}
+
+void StudentWorld::moveToExit(Protestor *pr, int a, int b)
+{
+    std::cout << "MOVE TO EXIT CALLED!" << "\n";
+    for (int i = 0; i < 64; i++){
+        for (int j = 0; j < 64; j++){
+            visited[i][j] = 0;
+        }
+    }
+    
+    queue<Point> q;
+    q.push(Point(60,60));
+    visited[60][60] = 1;
+    
+    while (!q.empty()) {
+        Point c = q.front();
+        q.pop();
+        
+        int x=c.x;
+        int y=c.y;
+
+        //left
+        if(canMoveInDirection(x,y, GraphObject::left) && visited[x-1][y]==0){
+            q.push(Point(x-1,y));
+            visited[x-1][y] = visited[x][y]+1;
+        }
+        //right
+        if(canMoveInDirection(x,y, GraphObject::right) && visited[x+1][y]==0){
+            q.push(Point(x+1,y));
+            visited[x+1][y] = visited[x][y]+1;
+        }
+        //up
+        if(canMoveInDirection(x,y, GraphObject::up) && visited[x][y+1]==0){
+            q.push(Point(x,y+1));
+            visited[x][y+1] = visited[x][y]+1;
+        }
+        // down
+        if(canMoveInDirection(x,y, GraphObject::down) && visited[x][y-1]==0){
+            q.push(Point(x,y-1));
+            visited[x][y-1] = visited[x][y]+1;
+        }
+    }
+    
+    if(canMoveInDirection(a,b, GraphObject::left) && visited[a-1][b] < visited[a][b])
+        pr->moveInDirection(GraphObject::left);
+    if(canMoveInDirection(a,b, GraphObject::right) && visited[a+1][b] < visited[a][b])
+        pr->moveInDirection(GraphObject::right);
+    if(canMoveInDirection(a,b, GraphObject::up) && visited[a][b+1] < visited[a][b])
+        pr->moveInDirection(GraphObject::up);
+    if(canMoveInDirection(a,b, GraphObject::down) && visited[a][b-1] < visited[a][b])
+        pr->moveInDirection(GraphObject::down);
+    return ;
 }
